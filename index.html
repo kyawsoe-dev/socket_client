@@ -2,10 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>KS Chat App</title>
     <link rel="icon" type="image/x-icon" href="/assets/images/favicon.png" />
     <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="/manifest.json" />
   </head>
+
   <body>
     <h1>KS Chat App</h1>
 
@@ -14,8 +20,12 @@
 
     <div class="input-container">
       <input type="text" id="usernameInput" placeholder="Your name" />
-      <input type="text" id="messageInput" placeholder="Type a message..." />
-      <button id="emojiButton" title="Add emoji">😊</button>
+
+      <div class="message-area">
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button id="emojiButton" title="Add emoji">😊</button>
+      </div>
+
       <button id="sendButton">Send</button>
     </div>
 

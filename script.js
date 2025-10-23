@@ -14,6 +14,7 @@ const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
 const typingSound = new Audio("/assets/audio/typing1.mp3");
 
+// Socket Conenction check
 socket.on("connect", () => {
   const status = document.createElement("p");
   status.textContent = "Connected to Socket.IO Server";
@@ -22,6 +23,7 @@ socket.on("connect", () => {
   scrollToBottom();
 });
 
+// Chat Message
 socket.on("chat message", (msg) => {
   if (!msg.username || !msg.text) return;
 

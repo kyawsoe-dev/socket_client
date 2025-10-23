@@ -98,14 +98,13 @@ h1 {
   background: #125aa0;
 }
 
-/* Receiver (Left) */
 .message.left {
   justify-content: flex-start;
 }
 
 .message.left .bubble {
-  background: #e3f2fd;
-  color: #333;
+  background: #1976d2;
+  color: white;
   border-radius: 12px 12px 12px 0;
 }
 

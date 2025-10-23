@@ -1,8 +1,7 @@
 import { EmojiButton } from "https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js";
 
-const socket = io(
-  `${window.location.protocol}//${window.location.hostname}:3000`
-);
+// const socket = io("http://localhost:3000");
+const socket = io("https://socket-server-ohp4.onrender.com");
 
 const chatbox = document.getElementById("chatbox");
 const usernameInput = document.getElementById("usernameInput");

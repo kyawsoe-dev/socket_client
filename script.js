@@ -1,6 +1,5 @@
 import { EmojiButton } from "https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js";
 
-// const socket = io("http://localhost:3000");
 const socket = io("https://socket-server-ohp4.onrender.com");
 
 const chatbox = document.getElementById("chatbox");
@@ -14,7 +13,7 @@ const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
 const typingSound = new Audio("/assets/audio/typing1.mp3");
 
-// Socket Conenction check
+// Socket Connection Check
 socket.on("connect", () => {
   const status = document.createElement("p");
   status.textContent = "Connected to Socket.IO Server";
@@ -23,7 +22,7 @@ socket.on("connect", () => {
   scrollToBottom();
 });
 
-// Chat Message
+// Receive Chat Message
 socket.on("chat message", (msg) => {
   if (!msg.username || !msg.text) return;
 
@@ -34,8 +33,7 @@ socket.on("chat message", (msg) => {
   if (!isSender) receiveSound.play();
 
   const messageElement = document.createElement("div");
-  messageElement.classList.add("message");
-  if (isSender) messageElement.classList.add("sender");
+  messageElement.classList.add("message", isSender ? "right" : "left");
 
   const avatar = document.createElement("div");
   avatar.classList.add("avatar");
@@ -53,7 +51,7 @@ socket.on("chat message", (msg) => {
 
   const timeSpan = document.createElement("div");
   timeSpan.classList.add("timestamp");
-  timeSpan.textContent = msg.time;
+  timeSpan.textContent = msg.time || new Date().toLocaleTimeString();
 
   bubble.appendChild(nameSpan);
   bubble.appendChild(textSpan);
@@ -74,6 +72,7 @@ socket.on("chat message", (msg) => {
 // Typing indicator
 let lastTypingSoundTime = 0;
 const typingSoundInterval = 1000;
+
 socket.on("typing", (username) => {
   typingIndicator.textContent = `${username} is typing...`;
 
@@ -116,17 +115,15 @@ function scrollToBottom() {
   chatbox.scrollTop = chatbox.scrollHeight;
 }
 
+// Emoji Picker
 const picker = new EmojiButton({ theme: "auto", position: "top-end" });
-
 picker.on("emoji", (selection) => {
   messageInput.value += selection.emoji;
   messageInput.focus();
 });
+emojiButton.addEventListener("click", () => picker.togglePicker(emojiButton));
 
-emojiButton.addEventListener("click", () => {
-  picker.togglePicker(emojiButton);
-});
-
+// Service Worker
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker

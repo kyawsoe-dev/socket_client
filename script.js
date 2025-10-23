@@ -1,6 +1,8 @@
 import { EmojiButton } from "https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js";
 
-const socket = io("http://localhost:3000");
+const socket = io(
+  `${window.location.protocol}//${window.location.hostname}:3000`
+);
 
 const chatbox = document.getElementById("chatbox");
 const usernameInput = document.getElementById("usernameInput");
@@ -9,9 +11,9 @@ const typingIndicator = document.getElementById("typing");
 const sendButton = document.getElementById("sendButton");
 const emojiButton = document.querySelector("#emojiButton");
 
-const sendSound = new Audio("/assets/send.mp3");
-const receiveSound = new Audio("/assets/receive.mp3");
-const typingSound = new Audio("/assets/typing.mp3");
+const sendSound = new Audio("/assets/audio/send.mp3");
+const receiveSound = new Audio("/assets/audio/receive.mp3");
+const typingSound = new Audio("/assets/audio/typing1.mp3");
 
 socket.on("connect", () => {
   const status = document.createElement("p");
@@ -70,7 +72,7 @@ socket.on("chat message", (msg) => {
 
 // Typing indicator
 let lastTypingSoundTime = 0;
-const typingSoundInterval = 300;
+const typingSoundInterval = 1000;
 socket.on("typing", (username) => {
   typingIndicator.textContent = `${username} is typing...`;
 
@@ -123,3 +125,12 @@ picker.on("emoji", (selection) => {
 emojiButton.addEventListener("click", () => {
   picker.togglePicker(emojiButton);
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/service-worker.js")
+      .then((reg) => console.log("Service Worker registered:", reg))
+      .catch((err) => console.log("Service Worker failed:", err));
+  });
+}

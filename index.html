@@ -1,200 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title id="appTitle">KS Chat App</title>
-    <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    />
-    <link rel="stylesheet" href="style.css" />
-    <link rel="manifest" href="manifest.json" />
-  </head>
 
-  <body>
-    <!-- AUTH VIEW -->
-    <div id="authView" class="auth-view">
-      <div class="auth-card">
-        <h2>Welcome to <span class="brand">KS Chat App</span></h2>
-        <p class="subtitle">Connect instantly with your friends</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="appTitle">KS Chat App</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
 
-        <div class="tab-container">
-          <button id="loginTab" class="tab-btn active">Login</button>
-          <button id="registerTab" class="tab-btn">Register</button>
-        </div>
-
-        <!-- LOGIN FORM -->
-        <form id="loginForm" class="auth-form">
-          <label for="loginIdentifier"
-            >Username or Email <span class="required">*</span></label
-          >
-          <input
-            id="loginIdentifier"
-            type="text"
-            placeholder="Username or Email"
-            required
-          />
-
-          <label for="loginPassword"
-            >Password <span class="required">*</span></label
-          >
-          <input
-            id="loginPassword"
-            type="password"
-            placeholder="Password"
-            required
-          />
-
-          <button type="submit" class="primary-btn">Login</button>
-        </form>
-
-        <!-- REGISTER FORM -->
-        <form id="registerForm" class="auth-form hidden">
-          <label for="regDisplayName">Full Name</label>
-          <input
-            id="regDisplayName"
-            type="text"
-            placeholder="Display Name (optional)"
-          />
-
-          <label for="regUsername"
-            >Username <span class="required">*</span></label
-          >
-          <input id="regUsername" type="text" placeholder="Username" required />
-
-          <label for="regEmail">Email</label>
-          <input id="regEmail" type="email" placeholder="Email (optional)" />
-
-          <label for="regPassword"
-            >Password <span class="required">*</span></label
-          >
-          <input
-            id="regPassword"
-            type="password"
-            placeholder="Password"
-            required
-          />
-
-          <button type="submit" class="primary-btn">Register</button>
-        </form>
+<body>
+  <!-- AUTH VIEW -->
+  <div id="authView" class="auth-view">
+    <div class="auth-card">
+      <div class="logo-container">
+        <img src="/assets/images/icon-512.png" alt="KS Chat Logo" class="auth-logo" />
       </div>
-    </div>
+      <h2>Welcome to <span class="brand">KS Chat App</span></h2>
+      <p class="subtitle">Connect instantly with your friends</p>
 
-    <!-- MAIN CHAT VIEW -->
-    <div id="mainView" class="main-view" style="display: none">
-      <div class="chat-container">
-        <!-- Sidebar for Conversations -->
-        <div class="sidebar">
-          <div class="sidebar-header">
-            <span id="meDisplay"></span>
-            <button id="logoutBtn" class="logout-btn">
-              <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-          </div>
-          <div class="conversations-section">
-            <button id="openGroupModalBtn" class="new-chat-btn">
-              Create New Group
-            </button>
-          </div>
-          <input
-            id="searchUsersInput"
-            type="text"
-            placeholder="Search users with name"
-            class="search-input"
-          />
-          <ul id="searchedUsersList" class="users-list"></ul>
-          <ul id="conversationsList" class="conversations-list"></ul>
+      <div class="tab-container">
+        <button id="loginTab" class="tab-btn active">Login</button>
+        <button id="registerTab" class="tab-btn">Register</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" class="auth-form">
+        <label for="loginIdentifier">Username or Email <span class="required">*</span></label>
+        <input id="loginIdentifier" type="text" placeholder="Username or Email" required />
+
+        <label for="loginPassword">Password <span class="required">*</span></label>
+        <div class="password-field">
+          <input id="loginPassword" type="password" placeholder="Password" required />
+          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('loginPassword', this)"></i>
         </div>
 
-        <!-- Chat Panel -->
-        <div class="chat-panel">
-          <div class="chat-header">
-            <button id="backBtn" class="back-btn" style="display: none">
-              <i class="fas fa-arrow-left"></i>
-            </button>
-            <div class="chat-header-content">
-              <div class="chat-header-title">
-                <div class="conv-avatar" id="convAvatar"></div>
-                <h2 id="convTitle" class="group-title">
-                  Select a conversation
-                </h2>
-              </div>
-              <div
-                id="convMembers"
-                class="conv-members"
-                style="display: none"
-              ></div>
+        <button type="submit" class="primary-btn login-btn">Login</button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" class="auth-form hidden">
+        <label for="regDisplayName">Full Name <span class="required">*</span></label>
+        <input id="regDisplayName" type="text" placeholder="Full Name" required />
+
+        <label for="regUsername">Username <span class="required">*</span></label>
+        <input id="regUsername" type="text" placeholder="Username" required />
+        <small id="usernameMsg" class="availability-msg"></small>
+
+        <label for="regEmail">Email <span class="required">*</span></label>
+        <input id="regEmail" type="email" placeholder="Email" required />
+        <small id="emailMsg" class="availability-msg"></small>
+
+        <label for="regPassword">Password <span class="required">*</span></label>
+        <div class="password-field">
+          <input id="regPassword" type="password" placeholder="Password" required />
+          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regPassword', this)"></i>
+        </div>
+
+        <label for="regConfirmPassword">Confirm Password <span class="required">*</span></label>
+        <div class="password-field">
+          <input id="regConfirmPassword" type="password" placeholder="Confirm Password" required />
+          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regConfirmPassword', this)"></i>
+        </div>
+
+        <small id="passwordMatchMsg" class="password-msg"></small>
+
+        <button type="submit" class="primary-btn">Register</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN CHAT VIEW -->
+  <div id="mainView" class="main-view" style="display: none">
+    <div class="chat-container">
+      <!-- Sidebar for Conversations -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span id="meDisplay"></span>
+          <button id="logoutBtn" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+        <div class="conversations-section">
+          <button id="openGroupModalBtn" class="new-chat-btn">
+            Create New Group
+          </button>
+        </div>
+        <input id="searchUsersInput" type="text" placeholder="Search users with name" class="search-input" />
+        <ul id="searchedUsersList" class="users-list"></ul>
+        <ul id="conversationsList" class="conversations-list"></ul>
+
+        <!-- Loading spinner -->
+        <div id="loadingSpinner" style="display: none; text-align: center; padding: 10px">
+          Loading...
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="chat-panel">
+        <div class="chat-header">
+          <button id="backBtn" class="back-btn" style="display: none">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <div class="chat-header-content">
+            <div class="chat-header-title">
+              <div class="conv-avatar" id="convAvatar"></div>
+              <h2 id="convTitle" class="group-title">
+                Select a conversation
+              </h2>
             </div>
+            <div id="convMembers" class="conv-members" style="display: none"></div>
           </div>
-
-          <div id="chatMessages" class="chat-messages"></div>
-
-          <div id="typing" class="typing"></div>
-
-          <form id="messageForm" class="chat-input">
-            <input
-              id="messageInput"
-              type="text"
-              placeholder="Type your message..."
-              required
-            />
-            <button type="button" id="emojiBtn" class="emoji-btn">
-              <i class="far fa-smile"></i>
-            </button>
-            <button type="submit" id="sendButton" class="send-btn">
-              <i class="fas fa-paper-plane"></i>
-            </button>
-          </form>
         </div>
-      </div>
 
-      <!-- Group Modal -->
-      <div id="groupModal" class="modal" style="display: none">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Create Group</h3>
-            <button id="closeGroupModalBtn" class="close-modal-btn">
-              &times;
-            </button>
-          </div>
+        <div id="chatMessages" class="chat-messages"></div>
 
-          <input id="groupTitle" type="text" placeholder="Group Title" />
-          <input
-            id="groupMemberSearch"
-            type="text"
-            placeholder="Search members by name..."
-          />
-          <ul id="groupMembersList" class="users-list"></ul>
-          <div id="selectedMembers" class="selected-members"></div>
-          <button id="createGroupBtn" class="primary-btn">Create</button>
-        </div>
+        <div id="typing" class="typing"></div>
+
+        <form id="messageForm" class="chat-input">
+          <input id="messageInput" type="text" placeholder="Type your message..." required />
+          <button type="button" id="emojiBtn" class="emoji-btn">
+            <i class="far fa-smile"></i>
+          </button>
+          <button type="submit" id="sendButton" class="send-btn">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </form>
       </div>
     </div>
 
-    <script src="/assets/js/socket.io.min.js"></script>
-    <script type="module" src="script.js"></script>
+    <!-- Group Modal -->
+    <div id="groupModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create Group</h3>
+          <button id="closeGroupModalBtn" class="close-modal-btn">
+            &times;
+          </button>
+        </div>
 
-    <script>
-      const loginTab = document.getElementById("loginTab");
-      const registerTab = document.getElementById("registerTab");
-      const loginForm = document.getElementById("loginForm");
-      const registerForm = document.getElementById("registerForm");
+        <input id="groupTitle" type="text" placeholder="Group Title" />
+        <input id="groupMemberSearch" type="text" placeholder="Search members by name..." />
+        <ul id="groupMembersList" class="users-list"></ul>
+        <div id="selectedMembers" class="selected-members"></div>
+        <button id="createGroupBtn" class="primary-btn">Create</button>
+      </div>
+    </div>
+  </div>
 
-      loginTab.addEventListener("click", () => {
-        loginTab.classList.add("active");
-        registerTab.classList.remove("active");
-        loginForm.classList.remove("hidden");
-        registerForm.classList.add("hidden");
-      });
+  <script src="/assets/js/socket.io.min.js"></script>
+  <script type="module" src="script.js"></script>
 
-      registerTab.addEventListener("click", () => {
-        registerTab.classList.add("active");
-        loginTab.classList.remove("active");
-        registerForm.classList.remove("hidden");
-        loginForm.classList.add("hidden");
-      });
-    </script>
-  </body>
+  <script>
+    // password toggle
+    function togglePassword(id, icon) {
+      const input = document.getElementById(id);
+      const isHidden = input.type === "password";
+      input.type = isHidden ? "text" : "password";
+      icon.classList.toggle("fa-eye");
+      icon.classList.toggle("fa-eye-slash");
+    }
+  </script>
+</body>
+
 </html>

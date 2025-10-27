@@ -67,15 +67,22 @@ function debounce(fn, delay = 300) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const loginTab = document.getElementById("loginTab");
+  const registerTab = document.getElementById("registerTab");
+
   const authView = document.getElementById("authView");
   const mainView = document.getElementById("mainView");
   const loginForm = document.getElementById("loginForm");
   const registerForm = document.getElementById("registerForm");
   const loginIdentifier = document.getElementById("loginIdentifier");
   const loginPassword = document.getElementById("loginPassword");
+  const regConfirm = document.getElementById("regConfirmPassword");
+  const usernameMsg = document.getElementById("usernameMsg");
+  const emailMsg = document.getElementById("emailMsg");
+  const passwordMatchMsg = document.getElementById("passwordMatchMsg");
+  const submitBtn = registerForm.querySelector("button[type='submit']");
   const regUsername = document.getElementById("regUsername");
   const regEmail = document.getElementById("regEmail");
-  const regDisplayName = document.getElementById("regDisplayName");
   const regPassword = document.getElementById("regPassword");
   const meDisplay = document.getElementById("meDisplay");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -138,6 +145,203 @@ document.addEventListener("DOMContentLoaded", async () => {
     mainView.style.display = "";
     appTitle.textContent = "KS Chat App";
   }
+
+  loginTab.addEventListener("click", () => {
+    loginTab.classList.add("active");
+    registerTab.classList.remove("active");
+    loginForm.classList.remove("hidden");
+    registerForm.classList.add("hidden");
+  });
+
+  registerTab.addEventListener("click", () => {
+    registerTab.classList.add("active");
+    loginTab.classList.remove("active");
+    registerForm.classList.remove("hidden");
+    loginForm.classList.add("hidden");
+  });
+
+  // password toggle
+  function togglePassword(id, icon) {
+    const input = document.getElementById(id);
+    const isHidden = input.type === "password";
+    input.type = isHidden ? "text" : "password";
+    icon.classList.toggle("fa-eye");
+    icon.classList.toggle("fa-eye-slash");
+  }
+
+  // check field availability
+  async function checkAvailability(field, value, msgElem) {
+    if (!value) {
+      msgElem.textContent = "";
+      msgElem.style.color = "";
+      return true;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE}/auth/check?field=${field}&value=${encodeURIComponent(
+          value
+        )}`
+      );
+      const data = await res.json();
+      if (data.available) {
+        msgElem.textContent = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } available`;
+        msgElem.style.color = "green";
+        return true;
+      } else {
+        msgElem.textContent = `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } already in use`;
+        msgElem.style.color = "red";
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      msgElem.textContent = "";
+      return false;
+    }
+  }
+
+  // live validation checks
+  let usernameValid = false;
+  let emailValid = false;
+  let passwordMatchValid = false;
+
+  regUsername.addEventListener(
+    "input",
+    debounce(async () => {
+      usernameValid = await checkAvailability(
+        "username",
+        regUsername.value.trim(),
+        usernameMsg
+      );
+      updateSubmitState();
+    }, 500)
+  );
+
+  regEmail.addEventListener(
+    "input",
+    debounce(async () => {
+      emailValid = await checkAvailability(
+        "email",
+        regEmail.value.trim(),
+        emailMsg
+      );
+      updateSubmitState();
+    }, 500)
+  );
+
+  // live password match check
+  function checkPasswords() {
+    if (!regPassword.value && !regConfirm.value) {
+      passwordMatchMsg.textContent = "";
+      regConfirm.style.borderColor = "";
+      passwordMatchValid = false;
+      updateSubmitState();
+      return;
+    }
+
+    if (regPassword.value === regConfirm.value) {
+      passwordMatchMsg.textContent = "Passwords match";
+      passwordMatchMsg.style.color = "green";
+      regConfirm.style.borderColor = "green";
+      passwordMatchValid = true;
+    } else {
+      passwordMatchMsg.textContent = "Passwords do not match";
+      passwordMatchMsg.style.color = "red";
+      regConfirm.style.borderColor = "red";
+      passwordMatchValid = false;
+    }
+    updateSubmitState();
+  }
+
+  regPassword.addEventListener("input", checkPasswords);
+  regConfirm.addEventListener("input", checkPasswords);
+
+  // Enable submit when all valid
+  function updateSubmitState() {
+    submitBtn.disabled = !(usernameValid && emailValid && passwordMatchValid);
+  }
+
+  //  AUTH HANDLERS
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!(usernameValid && emailValid && passwordMatchValid)) {
+      alert("Please fix errors before submitting.");
+      return;
+    }
+
+    const registerBtn = registerForm.querySelector("button[type='submit']");
+    registerBtn.disabled = true;
+    const originalText = registerBtn.textContent;
+    registerBtn.textContent = "Registering...";
+
+    const username = regUsername.value.trim();
+    const email = regEmail.value.trim();
+    const displayName = document.getElementById("regDisplayName").value.trim();
+    const password = regPassword.value;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, displayName }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log("Registered!", data);
+        alert("Registration successful! Please log in.");
+        loginTab.click();
+      } else {
+        alert(data.error || "Registration failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Register request failed");
+    } finally {
+      registerBtn.disabled = false;
+      registerBtn.textContent = originalText;
+    }
+  });
+
+  loginForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const loginBtn = loginForm.querySelector("button[type='submit']");
+    const usernameOrEmail = loginIdentifier.value.trim();
+    const password = loginPassword.value;
+
+    loginBtn.disabled = true;
+    const originalText = loginBtn.textContent;
+    loginBtn.textContent = "Logging in...";
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: apiHeaders(false),
+        body: JSON.stringify({ usernameOrEmail, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        saveAuth(data.token, data.user);
+        await initAfterAuth();
+      } else {
+        alert(data.error || "Login failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Login request failed");
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = originalText;
+    }
+  });
+
+  logoutBtn?.addEventListener("click", () => {
+    if (socket) socket.disconnect();
+    clearAuth();
+    showAuthView();
+  });
 
   //  TOGGLE MOBILE VIEWS
   function showConversationList() {
@@ -259,57 +463,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       openConversation(conversations[0]);
     }
   }
-
-  //  AUTH HANDLERS
-  registerForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = regUsername.value.trim();
-    const email = regEmail.value.trim() || undefined;
-    const displayName = regDisplayName.value.trim() || undefined;
-    const password = regPassword.value;
-    try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: apiHeaders(false),
-        body: JSON.stringify({ username, email, password, displayName }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        saveAuth(data.token, data.user);
-        await initAfterAuth();
-      } else alert(data.error || "Register failed");
-    } catch (err) {
-      console.error(err);
-      alert("Register request failed");
-    }
-  });
-
-  loginForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const usernameOrEmail = loginIdentifier.value.trim();
-    const password = loginPassword.value;
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: apiHeaders(false),
-        body: JSON.stringify({ usernameOrEmail, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        saveAuth(data.token, data.user);
-        await initAfterAuth();
-      } else alert(data.error || "Login failed");
-    } catch (err) {
-      console.error(err);
-      alert("Login request failed");
-    }
-  });
-
-  logoutBtn?.addEventListener("click", () => {
-    if (socket) socket.disconnect();
-    clearAuth();
-    showAuthView();
-  });
 
   //  MESSAGE INPUT
   messageForm?.addEventListener("submit", (e) => {
@@ -462,20 +615,60 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   //  CONVERSATIONS
-  async function loadConversations() {
+  let currentConvPage = 1;
+  let totalConvPages = 1;
+  let loadingConversations = false;
+
+  async function loadConversations(page = 1) {
+    if (loadingConversations) return;
+    loadingConversations = true;
+    const spinner = document.getElementById("loadingSpinner");
+    spinner.style.display = "block";
+
     try {
-      const res = await fetch(`${API_BASE}/conversations`, {
-        headers: apiHeaders(true),
-      });
+      const res = await fetch(
+        `${API_BASE}/conversations?page=${page}&limit=20`,
+        {
+          headers: apiHeaders(true),
+        }
+      );
       if (!res.ok) throw new Error("Failed to load conversations");
-      conversations = await res.json();
-      console.log("Loaded conversations:", conversations);
+      const data = await res.json();
+
+      const convs = data.data || data;
+      totalConvPages = data.totalPages || 1;
+
+      if (page === 1) {
+        conversations = convs;
+        document.getElementById("conversationsList").innerHTML = "";
+      } else {
+        conversations.push(...convs);
+      }
+
       renderConversations();
     } catch (err) {
       console.error("loadConversations", err);
       alert("Could not load conversations");
+    } finally {
+      spinner.style.display = "none";
+      loadingConversations = false;
     }
   }
+
+  const conversationsListEl = document.getElementById("conversationsList");
+
+  conversationsListEl.addEventListener("scroll", async () => {
+    if (loadingConversations) return;
+
+    const scrollBottom =
+      conversationsListEl.scrollTop + conversationsListEl.clientHeight;
+    const nearBottom = scrollBottom >= conversationsListEl.scrollHeight - 10;
+
+    if (nearBottom && currentConvPage < totalConvPages) {
+      currentConvPage++;
+      await loadConversations(currentConvPage);
+    }
+  });
 
   function renderConversations() {
     conversationsList.innerHTML = "";
@@ -509,7 +702,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function conversationTitleFromMembers(members) {
-    if (!members || members.length !== 2) return "Conversation";
+    if (!members || members.length !== 2) return;
     const other = members.find((m) => m.user.id !== currentUser.id);
     return (
       other?.user.displayName ||

@@ -345,11 +345,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   //  TOGGLE MOBILE VIEWS
   function showConversationList() {
-    console.log("Showing conversation list");
-    document.querySelector(".sidebar").style.display = "flex";
-    document.querySelector(".chat-panel").classList.remove("active");
+    const sidebar = document.querySelector(".sidebar");
+    const chatPanel = document.querySelector(".chat-panel");
+
+    sidebar.style.display = "flex";
+    chatPanel.classList.remove("active");
     convMembers.classList.add("hidden");
     if (backBtn) backBtn.style.display = "none";
+
+    if (!conversations || conversations.length === 0) {
+      chatPanel.style.display = "none";
+    } else {
+      chatPanel.style.display = "flex";
+      chatbox.innerHTML = "";
+    }
   }
 
   function showChatPanel() {
@@ -452,14 +461,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   //  INIT AFTER AUTH
   async function initAfterAuth() {
     if (!token || !currentUser) return;
+
     showMainView();
+
     meDisplay.textContent = `${
       currentUser.displayName || currentUser.username
     }`;
+
     connectSocket();
+
     await loadConversations();
-    if (window.innerWidth > 768 && conversations.length > 0) {
-      console.log("Selecting first conversation on desktop view");
+
+    if (!conversations || conversations.length === 0) {
+      showConversationList();
+    } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
   }
@@ -624,7 +639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let loadingConversations = false;
 
   async function loadConversations(page = 1) {
-    if (loadingConversations) return;
+    if (loadingConversations) return [];
     loadingConversations = true;
     const spinner = document.getElementById("loadingSpinner");
     spinner.style.display = "block";
@@ -644,15 +659,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (page === 1) {
         conversations = convs;
-        document.getElementById("conversationsList").innerHTML = "";
+        conversationsList.innerHTML = "";
       } else {
         conversations.push(...convs);
       }
 
       renderConversations();
+
+      const chatPanel = document.querySelector(".chat-panel");
+      if (conversations.length > 0) chatPanel.style.display = "flex";
+
+      return convs;
     } catch (err) {
       console.error("loadConversations", err);
       alert("Could not load conversations");
+      return [];
     } finally {
       spinner.style.display = "none";
       loadingConversations = false;
@@ -730,6 +751,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  // converstaion details
   async function openConversation(conv) {
     console.log(
       "Opening conversation ID:",
@@ -739,70 +761,64 @@ document.addEventListener("DOMContentLoaded", async () => {
       "members:",
       conv.members
     );
+
     currentConversation = conv;
+
     const title = conv.isGroup
       ? conv.title || "Group"
       : conversationTitleFromMembers(conv.members);
     convTitle.textContent = title;
     convAvatar.textContent = title.charAt(0).toUpperCase();
 
+    chatbox.innerHTML = "";
+    typingIndicator.textContent = "";
+    receivedMessages.clear();
+
     if (conv.isGroup) {
+      convMembers.style.display = "block";
+
       if (
-        !conv.members ||
-        !Array.isArray(conv.members) ||
-        conv.members.length === 0
+        conv.members &&
+        Array.isArray(conv.members) &&
+        conv.members.length > 0
       ) {
-        console.warn("No valid members for group chat:", conv);
-        convMembers.innerHTML =
-          '<div class="member-count">No members available</div>';
-      } else {
+        const loggedUserId = localStorage.getItem("userId");
+
         const memberNames = conv.members
-          .filter((m) => m.user && m.user.id !== currentUser.id)
           .map((m) => {
             const name =
               m.user?.displayName ||
               m.user?.username ||
               `User ${m.user?.id || "unknown"}`;
-            return `<span class="member">${name}</span>`;
+            const isLoggedUser = String(m.user?.id) === String(loggedUserId);
+            return `<span class="member${isLoggedUser ? " logged-user" : ""}">
+                    ${name}
+                  </span>`;
           })
-          .join(", ");
-        const memberCount = conv.members.length;
-        convMembers.innerHTML = `
-          <div class="member-list">${memberNames}</div>
-          <div class="member-count">Total: ${memberCount} member${
-          memberCount !== 1 ? "s" : ""
-        }</div>
-        `;
-        console.log("Set convMembers HTML:", convMembers.innerHTML);
-      }
-    } else if (conv.members) {
-      const other = conv.members.find((m) => m.user.id !== currentUser.id);
-      const name = other
-        ? other.user.displayName ||
-          other.user.username ||
-          `User ${other.user.id}`
-        : "No other member";
-      convMembers.innerHTML = `
-        <div class="member-list">${name}</div>
-        <div class="member-count">Total: 2 members</div>
-      `;
-      console.log("Set convMembers HTML for 1:1:", convMembers.innerHTML);
-    } else {
-      convMembers.innerHTML =
-        '<div class="member-count">No members available</div>';
-      console.log("No members for conversation:", conv);
-    }
+          .join(""); // no commas
 
-    convMembers.classList.add("hidden");
-    chatbox.innerHTML = "";
-    typingIndicator.textContent = "";
-    receivedMessages.clear();
+        const totalCount = conv.members.length;
+        convMembers.innerHTML = `
+        <div class="member-list">${memberNames}</div>
+        <div class="member-count">Total: ${totalCount} member${
+          totalCount !== 1 ? "s" : ""
+        }</div>
+      `;
+      } else {
+        convMembers.innerHTML =
+          '<div class="member-count">No members available</div>';
+      }
+    } else {
+      convMembers.style.display = "none";
+    }
 
     if (socket?.connected) socket.emit("join", { conversationId: conv.id });
 
     await loadMessages(conv.id);
 
     if (socket?.connected) socket.emit("markRead", { conversationId: conv.id });
+
+    console.log("Members list set:", convMembers.innerHTML);
   }
 
   async function loadMessages(conversationId, limit = 50, cursor) {
@@ -950,7 +966,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       span.textContent = user.displayName || user.username;
       const remove = document.createElement("span");
       remove.className = "remove";
-      remove.textContent = "×";
+      remove.textContent = "x";
       remove.addEventListener("click", () => {
         selectedGroupMembers = selectedGroupMembers.filter(
           (m) => m.id !== user.id
@@ -965,21 +981,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   createGroupBtn?.addEventListener("click", async () => {
     const title = groupTitle.value.trim();
     const memberIds = selectedGroupMembers.map((m) => m.id);
+
+    if (memberIds.length < 2) {
+      alert(
+        "You must include at least 2 other members (plus yourself) to create a group."
+      );
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/conversations/group`, {
         method: "POST",
         headers: apiHeaders(true),
         body: JSON.stringify({ title, memberIds }),
       });
+
       if (!res.ok)
         throw new Error((await res.json()).message || "Create group failed");
+
       const group = await res.json();
       groupModal.style.display = "none";
       groupTitle.value = "";
       selectedGroupMembers = [];
       selectedMembers.innerHTML = "";
+
       await loadConversations();
       openConversation(group);
+
       if (window.innerWidth <= 768) {
         showChatPanel();
       }

@@ -11,6 +11,13 @@ body {
   overflow: hidden;
 }
 
+/* LOADING */
+.loading {
+  display: none;
+  text-align: center;
+  padding: 10px;
+}
+
 /* AUTH VIEW */
 .auth-view {
   display: flex;
@@ -206,6 +213,7 @@ body {
   height: 100%;
   overflow-y: auto;
 }
+
 .sidebar-header {
   padding: 15px;
   display: flex;
@@ -214,6 +222,7 @@ body {
   border-bottom: 1px solid #e5e5ea;
   background: white;
 }
+
 #meDisplay {
   font-weight: 600;
   color: #000;
@@ -300,12 +309,13 @@ body {
 }
 
 .conversations-list {
-  max-height: 400px;
-  overflow-y: auto;
-  list-style: none;
   flex: 1;
   overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
   -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 200px);
 }
 
 .conversation-item {
@@ -758,5 +768,11 @@ body {
   .primary-btn,
   .secondary-btn {
     padding: 10px;
+  }
+}
+
+@media (max-height: 600px) {
+  .conversations-list {
+    max-height: calc(100vh - 150px);
   }
 }

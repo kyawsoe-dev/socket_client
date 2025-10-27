@@ -607,11 +607,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function updateConversationPreview(convId, newMsg) {
-    const conv = conversations.find((c) => c.id === convId);
-    if (conv) {
-      conv.lastMessage = newMsg;
-      renderConversations();
-    }
+    const convIndex = conversations.findIndex((c) => c.id === convId);
+    if (convIndex === -1) return;
+
+    conversations[convIndex].lastMessage = newMsg;
+
+    const [conv] = conversations.splice(convIndex, 1);
+    conversations.unshift(conv);
+
+    renderConversations();
   }
 
   //  CONVERSATIONS
@@ -672,33 +676,48 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderConversations() {
     conversationsList.innerHTML = "";
-    conversations.forEach((c, index) => {
+
+    conversations.sort((a, b) => {
+      const aTime = a.lastMessage
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : 0;
+      const bTime = b.lastMessage
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : 0;
+      return bTime - aTime;
+    });
+
+    conversations.forEach((c) => {
       const li = document.createElement("li");
       li.className = `conversation-item${
         currentConversation && currentConversation.id === c.id ? " active" : ""
       }`;
+
       const title = c.isGroup
         ? c.title || "Untitled Group"
         : conversationTitleFromMembers(c.members);
+
       const preview = c.lastMessage?.content
         ? c.lastMessage.content.slice(0, 50) + "..."
         : "";
+
       li.innerHTML = `
-        <div class="conv-avatar">${title.charAt(0).toUpperCase()}</div>
-        <div class="conv-info">
-          <div class="conv-title">${title}</div>
-          <div class="conv-meta">${preview}</div>
-        </div>
-      `;
+      <div class="conv-avatar">${title.charAt(0).toUpperCase()}</div>
+      <div class="conv-info">
+        <div class="conv-title">${title}</div>
+        <div class="conv-meta">${preview}</div>
+      </div>
+    `;
+
       li.addEventListener("click", () => {
-        console.log(`Opening conversation: ${title}`);
         openConversation(c);
-        if (window.innerWidth <= 768) {
-          showChatPanel();
-        }
+        if (window.innerWidth <= 768) showChatPanel();
       });
+
       conversationsList.appendChild(li);
     });
+
+    conversationsList.scrollTop = 0;
   }
 
   function conversationTitleFromMembers(members) {

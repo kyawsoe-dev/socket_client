@@ -1,6 +1,9 @@
 const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
 const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
+// const API_BASE = "http://localhost:3000/api/v1";
+// const SOCKET_URL = "http://localhost:3000";
+
 //  STATE
 let socket = null;
 let currentUser = null;
@@ -97,7 +100,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const emojiButton = document.getElementById("emojiBtn");
   const convTitle = document.getElementById("convTitle");
   const convAvatar = document.getElementById("convAvatar");
-  const convMembers = document.getElementById("convMembers");
   const backBtn = document.getElementById("backBtn");
 
   const groupModal = document.getElementById("groupModal");
@@ -130,6 +132,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("Emoji picker load failed:", err);
       emojiButton.style.display = "none";
     }
+  }
+
+  // Alert
+  function showAlert(message, type = "info") {
+    Swal.fire({
+      icon: type, // 'success', 'error', 'warning', 'info', 'question'
+      text: message,
+      confirmButtonText: "OK",
+    });
   }
 
   //  SHOW/HIDE VIEWS
@@ -268,7 +279,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!(usernameValid && emailValid && passwordMatchValid)) {
-      alert("Please fix errors before submitting.");
+      showAlert("Please fix errors before submitting.", "warning");
       return;
     }
 
@@ -291,14 +302,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (res.ok) {
         console.log("Registered!", data);
-        alert("Registration successful! Please log in.");
+        showAlert("Registration successful! Please log in.", "success");
         loginTab.click();
       } else {
-        alert(data.error || "Registration failed");
+        showAlert(data.error || "Registration failed", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Register request failed");
+      showAlert("Register request failed", "error");
     } finally {
       registerBtn.disabled = false;
       registerBtn.textContent = originalText;
@@ -326,11 +337,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         saveAuth(data.token, data.user);
         await initAfterAuth();
       } else {
-        alert(data.error || "Login failed");
+        showAlert(data.error || "Login failed", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Login request failed");
+      showAlert("Login request failed", "error");
     } finally {
       loginBtn.disabled = false;
       loginBtn.textContent = originalText;
@@ -347,10 +358,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   function showConversationList() {
     const sidebar = document.querySelector(".sidebar");
     const chatPanel = document.querySelector(".chat-panel");
+    const convMembers = document.getElementById("convMembers");
 
     sidebar.style.display = "flex";
     chatPanel.classList.remove("active");
-    convMembers.classList.add("hidden");
+
+    if (convMembers) convMembers.classList.add("hidden");
+
     if (backBtn) backBtn.style.display = "none";
 
     if (!conversations || conversations.length === 0) {
@@ -370,27 +384,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Back button handlers
   backBtn?.addEventListener("click", () => {
-    console.log("Back button clicked");
     showConversationList();
     currentConversation = null;
     convTitle.textContent = "Select a conversation";
     convAvatar.textContent = "";
-    convMembers.innerHTML = "";
-    convMembers.classList.add("hidden");
-    chatbox.innerHTML = "";
-    typingIndicator.textContent = "";
+
+    const convMembers = document.getElementById("convMembers");
+    if (convMembers) {
+      convMembers.innerHTML = "";
+      convMembers.classList.add("hidden");
+    }
+
+    if (chatbox) chatbox.innerHTML = "";
+    if (typingIndicator) typingIndicator.textContent = "";
   });
 
   // Group title toggle
-  document
-    .querySelector(".chat-header-title")
-    ?.addEventListener("click", () => {
+  document.addEventListener("DOMContentLoaded", () => {
+    const convMembers = document.getElementById("convMembers");
+    const header = document.querySelector(".chat-header-title");
+
+    if (!convMembers || !header) {
+      console.warn("convMembers or header element not found in DOM");
+      return;
+    }
+
+    header.addEventListener("click", () => {
       if (currentConversation) {
-        console.log(
-          "Toggling convMembers, current hidden:",
-          convMembers.classList.contains("hidden")
-        );
+        const isHidden = convMembers.classList.contains("hidden");
+        console.log("Toggling convMembers, current hidden:", isHidden);
+
         convMembers.classList.toggle("hidden");
+
         console.log(
           "After toggle, hidden:",
           convMembers.classList.contains("hidden")
@@ -399,6 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log("No current conversation, cannot toggle convMembers");
       }
     });
+  });
 
   //  SOCKET
   function connectSocket() {
@@ -464,12 +490,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showMainView();
 
-    meDisplay.textContent = `${
-      currentUser.displayName || currentUser.username
-    }`;
+    const displayName = currentUser.displayName || currentUser.username;
+    meDisplay.textContent = displayName;
+
+    const meAvatar = document.getElementById("meAvatar");
+    if (meAvatar) {
+      meAvatar.textContent = displayName.charAt(0).toUpperCase();
+    }
 
     connectSocket();
-
     await loadConversations();
 
     if (!conversations || conversations.length === 0) {
@@ -493,7 +522,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function sendMessage() {
-    if (!currentConversation) return alert("Select a conversation first");
+    if (!currentConversation)
+      return showAlert("Select a conversation first", "warning");
     const text = messageInput.value.trim();
     if (!text) return;
 
@@ -546,7 +576,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (err) {
       console.error("sendMessage", err);
-      alert("Failed to send message");
+      showAlert("Failed to send message", "error");
     }
   }
 
@@ -672,7 +702,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return convs;
     } catch (err) {
       console.error("loadConversations", err);
-      alert("Could not load conversations");
+      showAlert("Could not load conversations", "error");
       return [];
     } finally {
       spinner.style.display = "none";
@@ -752,16 +782,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // converstaion details
-  async function openConversation(conv) {
-    console.log(
-      "Opening conversation ID:",
-      conv.id,
-      "isGroup:",
-      conv.isGroup,
-      "members:",
-      conv.members
-    );
+  const convCount = document.getElementById("convCount");
+  const groupInfoModal = document.getElementById("groupInfoModal");
+  const closeGroupInfo = document.getElementById("closeGroupInfo");
+  const groupInfoAvatar = document.getElementById("groupInfoAvatar");
+  const groupInfoName = document.getElementById("groupInfoName");
+  const groupInfoCount = document.getElementById("groupInfoCount");
+  const groupMemberList = document.getElementById("groupMemberList");
 
+  async function openConversation(conv) {
     currentConversation = conv;
 
     const title = conv.isGroup
@@ -770,55 +799,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     convTitle.textContent = title;
     convAvatar.textContent = title.charAt(0).toUpperCase();
 
-    chatbox.innerHTML = "";
-    typingIndicator.textContent = "";
-    receivedMessages.clear();
-
     if (conv.isGroup) {
-      convMembers.style.display = "block";
-
-      if (
-        conv.members &&
-        Array.isArray(conv.members) &&
-        conv.members.length > 0
-      ) {
-        const loggedUserId = localStorage.getItem("userId");
-
-        const memberNames = conv.members
-          .map((m) => {
-            const name =
-              m.user?.displayName ||
-              m.user?.username ||
-              `User ${m.user?.id || "unknown"}`;
-            const isLoggedUser = String(m.user?.id) === String(loggedUserId);
-            return `<span class="member${isLoggedUser ? " logged-user" : ""}">
-                    ${name}
-                  </span>`;
-          })
-          .join(""); // no commas
-
-        const totalCount = conv.members.length;
-        convMembers.innerHTML = `
-        <div class="member-list">${memberNames}</div>
-        <div class="member-count">Total: ${totalCount} member${
-          totalCount !== 1 ? "s" : ""
-        }</div>
-      `;
-      } else {
-        convMembers.innerHTML =
-          '<div class="member-count">No members available</div>';
-      }
+      const totalCount = conv.members?.length || 0;
+      convCount.textContent = `${totalCount} member${
+        totalCount !== 1 ? "s" : ""
+      }`;
+      convTitle.onclick = () => openGroupInfo(conv);
     } else {
-      convMembers.style.display = "none";
+      convCount.textContent = "";
+      convTitle.onclick = null;
     }
 
     if (socket?.connected) socket.emit("join", { conversationId: conv.id });
-
     await loadMessages(conv.id);
-
     if (socket?.connected) socket.emit("markRead", { conversationId: conv.id });
+  }
 
-    console.log("Members list set:", convMembers.innerHTML);
+  function openGroupInfo(conv) {
+    groupInfoModal.classList.add("active");
+    groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
+    groupInfoName.textContent = conv.title || "Group";
+    groupInfoCount.textContent = `${conv.members.length} member${
+      conv.members.length !== 1 ? "s" : ""
+    }`;
+
+    groupMemberList.innerHTML = conv.members
+      .map((m) => {
+        const isOwner = m.isOwner === true;
+        const name =
+          m.user?.displayName || m.user?.username || `User ${m.user?.id}`;
+        return `
+        <div class="group-member ${isOwner ? "owner" : ""}" data-userid="${
+          m.user?.id
+        }">
+          <div class="group-member-avatar">${name.charAt(0).toUpperCase()}</div>
+          <div class="group-member-name">${name}</div>
+        </div>
+      `;
+      })
+      .join("");
+
+    document.querySelectorAll(".group-member").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        const userId = e.currentTarget.dataset.userid;
+        if (userId && userId !== localStorage.getItem("userId")) {
+          openPrivateChat(userId);
+        }
+      });
+    });
+  }
+
+  closeGroupInfo.onclick = () => {
+    groupInfoModal.classList.remove("active");
+  };
+
+  function openPrivateChat(userId) {
+    console.log("Opening private chat with user:", userId);
+    socket.emit("createPrivateConversation", { userId }, (response) => {
+      if (response?.conversation) {
+        groupInfoModal.classList.remove("active");
+        openConversation(response.conversation);
+      }
+    });
   }
 
   async function loadMessages(conversationId, limit = 50, cursor) {
@@ -898,7 +940,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       openConversation(conv);
     } catch (err) {
       console.error("createOneToOne", err);
-      alert("Create one-to-one failed: " + err.message);
+      showAlert("Create one-to-one failed: " + err.message, "error");
     }
   }
 
@@ -983,8 +1025,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const memberIds = selectedGroupMembers.map((m) => m.id);
 
     if (memberIds.length < 2) {
-      alert(
-        "You must include at least 2 other members (plus yourself) to create a group."
+      showAlert(
+        "You must include at least 2 other members (plus yourself) to create a group.",
+        "warning"
       );
       return;
     }
@@ -1013,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (err) {
       console.error(err);
-      alert("Could not create group: " + err.message);
+      showAlert("Could not create group: " + err.message, "error");
     }
   });
 

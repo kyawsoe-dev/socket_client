@@ -78,7 +78,11 @@
       <!-- Sidebar for Conversations -->
       <div class="sidebar">
         <div class="sidebar-header">
-          <span id="meDisplay"></span>
+          <div class="me-section">
+            <div id="meAvatar" class="me-avatar"></div>
+            <span id="meDisplay" class="me-display"></span>
+          </div>
+
           <button id="logoutBtn" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
           </button>
@@ -93,9 +97,7 @@
         <ul id="conversationsList" class="conversations-list"></ul>
 
         <!-- Loading spinner -->
-        <div id="loadingSpinner" class="loading">
-          Loading...
-        </div>
+        <div id="loadingSpinner" class="loading">Loading...</div>
       </div>
 
       <!-- Chat Panel -->
@@ -105,13 +107,32 @@
             <i class="fas fa-arrow-left"></i>
           </button>
           <div class="chat-header-content">
-            <div class="chat-header-title">
-              <div class="conv-avatar" id="convAvatar"></div>
-              <h2 id="convTitle" class="group-title">
-                Select a conversation
-              </h2>
+            <div class="chat-header-content">
+              <div class="chat-header-title" id="convHeader">
+                <div class="conv-avatar" id="convAvatar">G</div>
+                <div class="conv-info">
+                  <h2 id="convTitle" class="group-title">
+                    Select a conversation
+                  </h2>
+                  <span id="convCount" class="conv-count">0 members</span>
+                </div>
+              </div>
             </div>
-            <div id="convMembers" class="conv-members" style="display: none"></div>
+          </div>
+
+          <!-- Group Info Modal -->
+          <div id="groupInfoModal" class="group-info-modal">
+            <div class="group-info-content">
+              <div class="group-info-header">
+                <div class="group-info-avatar" id="groupInfoAvatar"></div>
+                <div class="group-info-title">
+                  <h3 id="groupInfoName"></h3>
+                  <p id="groupInfoCount"></p>
+                </div>
+                <button id="closeGroupInfo" class="close-btn">&times;</button>
+              </div>
+              <div class="group-member-list" id="groupMemberList"></div>
+            </div>
           </div>
         </div>
 
@@ -151,6 +172,7 @@
   </div>
 
   <script src="/assets/js/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="script.js"></script>
 
   <script>

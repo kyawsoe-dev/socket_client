@@ -12,7 +12,8 @@
 </head>
 
 <body>
-  <!-- AUTH VIEW -->
+  <div id="sidebarOverlay" class="overlay" style="display: none"></div>
+
   <div id="authView" class="auth-view">
     <div class="auth-card">
       <div class="logo-container">
@@ -26,7 +27,6 @@
         <button id="registerTab" class="tab-btn">Register</button>
       </div>
 
-      <!-- LOGIN FORM -->
       <form id="loginForm" class="auth-form">
         <label for="loginIdentifier">Username or Email <span class="required">*</span></label>
         <input id="loginIdentifier" type="text" placeholder="Username or Email" required />
@@ -40,7 +40,6 @@
         <button type="submit" class="primary-btn login-btn">Login</button>
       </form>
 
-      <!-- REGISTER FORM -->
       <form id="registerForm" class="auth-form hidden">
         <label for="regDisplayName">Full Name <span class="required">*</span></label>
         <input id="regDisplayName" type="text" placeholder="Full Name" required />
@@ -72,10 +71,8 @@
     </div>
   </div>
 
-  <!-- MAIN CHAT VIEW -->
   <div id="mainView" class="main-view" style="display: none">
     <div class="chat-container">
-      <!-- Sidebar for Conversations -->
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="me-section">
@@ -85,6 +82,9 @@
 
           <button id="logoutBtn" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+          <button id="toggleSuggestedBtn" class="icon-btn" title="Toggle suggested users">
+            <i class="fas fa-user-plus"></i>
           </button>
         </div>
         <div class="conversations-section">
@@ -96,11 +96,9 @@
         <ul id="searchedUsersList" class="users-list"></ul>
         <ul id="conversationsList" class="conversations-list"></ul>
 
-        <!-- Loading spinner -->
         <div id="loadingSpinner" class="loading">Loading...</div>
       </div>
 
-      <!-- Chat Panel -->
       <div class="chat-panel">
         <div class="chat-header">
           <button id="backBtn" class="back-btn" style="display: none">
@@ -120,7 +118,6 @@
             </div>
           </div>
 
-          <!-- Group Info Modal -->
           <div id="groupInfoModal" class="group-info-modal">
             <div class="group-info-content">
               <div class="group-info-header">
@@ -132,6 +129,10 @@
                 <button id="closeGroupInfo" class="close-btn">&times;</button>
               </div>
               <div class="group-member-list" id="groupMemberList"></div>
+              <div class="group-manage" id="groupManage" style="display: none">
+                <input id="addMemberSearch" type="text" placeholder="Search to add..." class="search-input" />
+                <ul id="addMemberList" class="users-list"></ul>
+              </div>
             </div>
           </div>
         </div>
@@ -150,9 +151,16 @@
           </button>
         </form>
       </div>
+      <div id="suggestedUsersContainer" class="suggested-right">
+        <div class="suggested-header">
+          <h4><i class="fas fa-user-plus"></i> Suggested Users</h4>
+        </div>
+        <div class="suggested-content">
+          <ul id="suggestedUsersList" class="suggested-list"></ul>
+        </div>
+      </div>
     </div>
 
-    <!-- Group Modal -->
     <div id="groupModal" class="modal" style="display: none">
       <div class="modal-content">
         <div class="modal-header">
@@ -176,7 +184,6 @@
   <script type="module" src="script.js"></script>
 
   <script>
-    // password toggle
     function togglePassword(id, icon) {
       const input = document.getElementById(id);
       const isHidden = input.type === "password";

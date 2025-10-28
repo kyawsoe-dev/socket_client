@@ -4,7 +4,6 @@ const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 // const API_BASE = "http://localhost:3000/api/v1";
 // const SOCKET_URL = "http://localhost:3000";
 
-//  STATE
 let socket = null;
 let currentUser = null;
 let token = null;
@@ -15,6 +14,7 @@ let typingTimeout = null;
 let lastTypingEmit = 0;
 let receivedMessages = new Set();
 let selectedGroupMembers = [];
+let onlineUsers = new Set();
 
 const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
@@ -112,7 +112,92 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const appTitle = document.getElementById("appTitle");
 
-  //  EMOJI PICKER
+  const groupInfoModal = document.getElementById("groupInfoModal");
+  const closeGroupInfo = document.getElementById("closeGroupInfo");
+  const groupInfoAvatar = document.getElementById("groupInfoAvatar");
+  const groupInfoName = document.getElementById("groupInfoName");
+  const groupInfoCount = document.getElementById("groupInfoCount");
+  const groupMemberList = document.getElementById("groupMemberList");
+  const groupManage = document.getElementById("groupManage");
+  const addMemberSearch = document.getElementById("addMemberSearch");
+  const addMemberList = document.getElementById("addMemberList");
+
+
+  // ---------------------------------------------------------------
+  //  SUGGESTED USERS PANEL – SHOW / HIDE TOGGLE (works on desktop too)
+  // ---------------------------------------------------------------
+  const suggestedContainer = document.getElementById("suggestedUsersContainer");
+  const toggleBtn = document.getElementById("toggleSuggestedBtn");
+
+  if (toggleBtn && suggestedContainer) {
+    const isLargeScreen = () => window.innerWidth > 768;
+
+    // ----- 1. Load saved state (desktop also respects it now) -----
+    const saved = localStorage.getItem("suggestedPanelOpen");
+    const savedOpen = saved === "true";
+
+    // ----- 2. Initial visibility -----
+    //   • Desktop: open by default **or** respect saved state
+    //   • Mobile : respect saved state (default = closed)
+    const shouldBeOpen = isLargeScreen()
+      ? (savedOpen ?? true)          // default true on desktop
+      : (savedOpen ?? false);        // default false on mobile
+
+    suggestedContainer.classList.toggle("active", shouldBeOpen);
+    toggleBtn.innerHTML = shouldBeOpen
+      ? '<i class="fas fa-user-minus"></i>'
+      : '<i class="fas fa-user-plus"></i>';
+
+    // ----- 3. Click handler (same for every screen size) -----
+    toggleBtn.addEventListener("click", () => {
+      const willBeOpen = !suggestedContainer.classList.contains("active");
+      suggestedContainer.classList.toggle("active", willBeOpen);
+      toggleBtn.innerHTML = willBeOpen
+        ? '<i class="fas fa-user-minus"></i>'
+        : '<i class="fas fa-user-plus"></i>';
+
+      // Persist the choice for *both* desktop and mobile
+      localStorage.setItem("suggestedPanelOpen", willBeOpen);
+    });
+
+    // ----- 4. Resize handling (keeps state in sync) -----
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const nowLarge = isLargeScreen();
+        const savedOpen = localStorage.getItem("suggestedPanelOpen") === "true";
+
+        // When we cross the breakpoint we **respect the saved preference**
+        // (desktop default = open, mobile default = closed)
+        const targetOpen = nowLarge
+          ? (savedOpen ?? true)
+          : (savedOpen ?? false);
+
+        suggestedContainer.classList.toggle("active", targetOpen);
+        toggleBtn.innerHTML = targetOpen
+          ? '<i class="fas fa-user-minus"></i>'
+          : '<i class="fas fa-user-plus"></i>';
+      }, 150);
+    });
+  }
+
+  document.getElementById("openSidebarBtn")?.addEventListener("click", () => {
+    document.querySelector(".sidebar").classList.add("active");
+    document.getElementById("sidebarOverlay").classList.add("active");
+  });
+
+  document.getElementById("sidebarOverlay").addEventListener("click", () => {
+    document.querySelector(".sidebar").classList.remove("active");
+    document.getElementById("sidebarOverlay").classList.remove("active");
+  });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    document.querySelector(".chat-panel").classList.remove("active");
+    document.querySelector(".sidebar").classList.add("active");
+    document.getElementById("sidebarOverlay").classList.add("active");
+  });
+
   if (emojiButton && messageInput) {
     try {
       const module = await import(
@@ -134,16 +219,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Alert
   function showAlert(message, type = "info") {
     Swal.fire({
-      icon: type, // 'success', 'error', 'warning', 'info', 'question'
+      icon: type,
       text: message,
       confirmButtonText: "OK",
     });
   }
 
-  //  SHOW/HIDE VIEWS
   function showAuthView() {
     authView.style.display = "";
     mainView.style.display = "none";
@@ -171,50 +254,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     loginForm.classList.add("hidden");
   });
 
-  // password toggle
-  function togglePassword(id, icon) {
-    const input = document.getElementById(id);
-    const isHidden = input.type === "password";
-    input.type = isHidden ? "text" : "password";
-    icon.classList.toggle("fa-eye");
-    icon.classList.toggle("fa-eye-slash");
-  }
-
-  // check field availability
-  async function checkAvailability(field, value, msgElem) {
-    if (!value) {
-      msgElem.textContent = "";
-      msgElem.style.color = "";
-      return true;
-    }
-    try {
-      const res = await fetch(
-        `${API_BASE}/auth/check?field=${field}&value=${encodeURIComponent(
-          value
-        )}`
-      );
-      const data = await res.json();
-      if (data.available) {
-        msgElem.textContent = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } available`;
-        msgElem.style.color = "green";
-        return true;
-      } else {
-        msgElem.textContent = `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } already in use`;
-        msgElem.style.color = "red";
-        return false;
-      }
-    } catch (err) {
-      console.error(err);
-      msgElem.textContent = "";
-      return false;
-    }
-  }
-
-  // live validation checks
   let usernameValid = false;
   let emailValid = false;
   let passwordMatchValid = false;
@@ -243,7 +282,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 500)
   );
 
-  // live password match check
+  // Check field availability
+  async function checkAvailability(field, value, msgElem) {
+    if (!value) {
+      msgElem.textContent = "";
+      msgElem.style.color = "";
+      return true;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/auth/check?field=${field}&value=${encodeURIComponent(value)}`
+      );
+      const data = await res.json();
+
+      const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1);
+
+      if (data.available) {
+        msgElem.textContent = `${fieldLabel} available`;
+        msgElem.style.color = "green";
+        return true;
+      } else {
+        msgElem.textContent = `${fieldLabel} already in use`;
+        msgElem.style.color = "red";
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      msgElem.textContent = "";
+      return false;
+    }
+  }
+
+
   function checkPasswords() {
     if (!regPassword.value && !regConfirm.value) {
       passwordMatchMsg.textContent = "";
@@ -270,12 +341,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   regPassword.addEventListener("input", checkPasswords);
   regConfirm.addEventListener("input", checkPasswords);
 
-  // Enable submit when all valid
   function updateSubmitState() {
     submitBtn.disabled = !(usernameValid && emailValid && passwordMatchValid);
   }
 
-  //  AUTH HANDLERS
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!(usernameValid && emailValid && passwordMatchValid)) {
@@ -354,7 +423,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     showAuthView();
   });
 
-  //  TOGGLE MOBILE VIEWS
   function showConversationList() {
     const sidebar = document.querySelector(".sidebar");
     const chatPanel = document.querySelector(".chat-panel");
@@ -382,7 +450,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (backBtn) backBtn.style.display = "inline-flex";
   }
 
-  // Back button handlers
   backBtn?.addEventListener("click", () => {
     showConversationList();
     currentConversation = null;
@@ -399,34 +466,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (typingIndicator) typingIndicator.textContent = "";
   });
 
-  // Group title toggle
-  document.addEventListener("DOMContentLoaded", () => {
-    const convMembers = document.getElementById("convMembers");
-    const header = document.querySelector(".chat-header-title");
+  const convMembers = document.getElementById("convMembers");
+  const header = document.querySelector(".chat-header-title");
 
-    if (!convMembers || !header) {
-      console.warn("convMembers or header element not found in DOM");
-      return;
-    }
-
+  if (header) {
     header.addEventListener("click", () => {
-      if (currentConversation) {
-        const isHidden = convMembers.classList.contains("hidden");
-        console.log("Toggling convMembers, current hidden:", isHidden);
-
+      const convMembers = document.getElementById("convMembers");
+      if (currentConversation && convMembers) {
         convMembers.classList.toggle("hidden");
-
-        console.log(
-          "After toggle, hidden:",
-          convMembers.classList.contains("hidden")
-        );
-      } else {
-        console.log("No current conversation, cannot toggle convMembers");
       }
     });
-  });
+  }
 
-  //  SOCKET
   function connectSocket() {
     if (!token) return;
     socket = io(SOCKET_URL, { auth: { token } });
@@ -443,6 +494,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     socket.on("chat message", renderIncomingMessage);
 
+    socket.on("message edited", (updated) => {
+      const el = chatbox.querySelector(`[data-msg-id="${updated.id}"]`);
+      if (el) {
+        const text = el.querySelector(".text");
+        text.textContent = updated.content;
+        const time = el.querySelector(".timestamp");
+        time.textContent = formatTime(updated.updatedAt || updated.createdAt) + " (edited)";
+      }
+    });
+
     socket.on("typing", ({ conversationId, username }) => {
       if (
         currentConversation &&
@@ -452,7 +513,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const now = Date.now();
         if (now - lastTypingEmit > 1000) {
           typingSound.currentTime = 0;
-          typingSound.play().catch(() => {});
+          typingSound.play().catch(() => { });
         }
         lastTypingEmit = now;
       }
@@ -474,6 +535,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
       }
     });
+
+    socket.on("users online", (ids) => {
+      onlineUsers = new Set(ids);
+      updateOnlineStatuses();
+    });
+
+    socket.on("user online", ({ userId }) => {
+      onlineUsers.add(userId);
+      updateOnlineStatuses();
+    });
+
+    socket.on("user offline", ({ userId }) => {
+      onlineUsers.delete(userId);
+      updateOnlineStatuses();
+    });
+  }
+
+  function updateOnlineStatuses() {
+    document.querySelectorAll("[data-userid]").forEach((el) => {
+      const userId = Number(el.dataset.userid);
+      if (onlineUsers.has(userId)) {
+        el.classList.add("online");
+      } else {
+        el.classList.remove("online");
+      }
+    });
   }
 
   function appendSystemMessage(text) {
@@ -484,7 +571,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     scrollToBottom(chatbox);
   }
 
-  //  INIT AFTER AUTH
   async function initAfterAuth() {
     if (!token || !currentUser) return;
 
@@ -499,7 +585,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     connectSocket();
+
     await loadConversations();
+
+    await loadSuggestedUsers();
 
     if (!conversations || conversations.length === 0) {
       showConversationList();
@@ -508,7 +597,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  //  MESSAGE INPUT
   messageForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     sendMessage();
@@ -557,7 +645,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             updateConversationPreview(currentConversation.id, ack.message);
           }
         });
-        sendSound.play().catch(() => {});
+        sendSound.play().catch(() => { });
       } else {
         const res = await fetch(
           `${API_BASE}/conversations/${currentConversation.id}/messages`,
@@ -572,7 +660,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           replaceOptimisticMessage(optimisticId, saved);
           updateConversationPreview(currentConversation.id, saved);
         }
-        sendSound.play().catch(() => {});
+        sendSound.play().catch(() => { });
       }
     } catch (err) {
       console.error("sendMessage", err);
@@ -585,9 +673,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     receivedMessages.add(msg.id);
 
     const el = document.createElement("div");
-    el.className = `message ${
-      msg.senderId === currentUser.id ? "right" : "left"
-    }`;
+    el.className = `message ${msg.senderId === currentUser.id ? "right" : "left"
+      }`;
     el.dataset.msgId = msg.id;
 
     const bubble = document.createElement("div");
@@ -616,7 +703,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const timeSpan = document.createElement("div");
     timeSpan.className = "timestamp";
-    timeSpan.textContent = formatTime(msg.createdAt);
+    const isEdited = msg.updatedAt && new Date(msg.updatedAt) > new Date(msg.createdAt);
+    timeSpan.textContent = formatTime(msg.createdAt) + (isEdited ? " (edited)" : "");
 
     bubble.appendChild(textSpan);
     bubble.appendChild(timeSpan);
@@ -627,9 +715,65 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.appendChild(avatar);
     el.appendChild(bubble);
 
+    if (msg.senderId === currentUser.id) {
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-btn";
+      editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+      editBtn.onclick = () => editMessage(msg.id, bubble);
+      el.appendChild(editBtn);
+    }
+
     if (optimistic) el.style.opacity = "0.7";
     chatbox.appendChild(el);
     scrollToBottom(chatbox);
+  }
+
+  async function editMessage(id, bubbleEl) {
+    const textEl = bubbleEl.querySelector(".text");
+    const original = textEl.textContent;
+    textEl.innerHTML = `<input type="text" value="${original}" />`;
+    const input = textEl.querySelector("input");
+    input.focus();
+    input.onblur = async () => {
+      const newContent = input.value.trim();
+      if (newContent === original) {
+        textEl.textContent = original;
+        return;
+      }
+      try {
+        if (socket.connected) {
+          socket.emit("edit message", { messageId: id, content: newContent }, (ack) => {
+            if (ack.success) {
+              textEl.textContent = newContent;
+            } else {
+              textEl.textContent = original;
+              showAlert(ack.error, "error");
+            }
+          });
+        } else {
+          const res = await fetch(`${API_BASE}/conversations/messages/${id}`, {
+            method: "PUT",
+            headers: apiHeaders(true),
+            body: JSON.stringify({ content: newContent }),
+          });
+          if (res.ok) {
+            textEl.textContent = newContent;
+          } else {
+            textEl.textContent = original;
+            showAlert("Edit failed", "error");
+          }
+        }
+      } catch {
+        textEl.textContent = original;
+        showAlert("Edit failed", "error");
+      }
+    };
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") {
+        textEl.textContent = original;
+      }
+    };
   }
 
   function replaceOptimisticMessage(tmpId, realMsg) {
@@ -645,7 +789,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     appendMessageToChat(msg);
     if (msg.senderId !== currentUser.id) {
       receiveSound.currentTime = 0;
-      receiveSound.play().catch(() => {});
+      receiveSound.play().catch(() => { });
     }
     updateConversationPreview(msg.conversationId, msg);
     scrollToBottom(chatbox);
@@ -663,7 +807,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderConversations();
   }
 
-  //  CONVERSATIONS
   let currentConvPage = 1;
   let totalConvPages = 1;
   let loadingConversations = false;
@@ -740,9 +883,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     conversations.forEach((c) => {
       const li = document.createElement("li");
-      li.className = `conversation-item${
-        currentConversation && currentConversation.id === c.id ? " active" : ""
-      }`;
+      li.className = `conversation-item${currentConversation && currentConversation.id === c.id ? " active" : ""
+        }`;
 
       const title = c.isGroup
         ? c.title || "Untitled Group"
@@ -751,6 +893,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const preview = c.lastMessage?.content
         ? c.lastMessage.content.slice(0, 50) + "..."
         : "";
+
+      if (!c.isGroup) {
+        const other = c.members.find((m) => m.user.id !== currentUser.id);
+        li.dataset.userid = other?.user.id;
+      }
 
       li.innerHTML = `
       <div class="conv-avatar">${title.charAt(0).toUpperCase()}</div>
@@ -769,29 +916,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     conversationsList.scrollTop = 0;
+    updateOnlineStatuses();
   }
 
   function conversationTitleFromMembers(members) {
     if (!members || members.length !== 2) return;
-    const other = members.find((m) => m.user.id !== currentUser.id);
+
+    const other = members.find((m) => m.user && m.user.id !== currentUser.id);
+
+    if (!other) return "Unknown User";
+
     return (
-      other?.user.displayName ||
-      other?.user.username ||
-      `User ${other?.user.id}`
+      other.user.displayName || other.user.username || `User ${other.user.id}`
     );
   }
 
-  // converstaion details
   const convCount = document.getElementById("convCount");
-  const groupInfoModal = document.getElementById("groupInfoModal");
-  const closeGroupInfo = document.getElementById("closeGroupInfo");
-  const groupInfoAvatar = document.getElementById("groupInfoAvatar");
-  const groupInfoName = document.getElementById("groupInfoName");
-  const groupInfoCount = document.getElementById("groupInfoCount");
-  const groupMemberList = document.getElementById("groupMemberList");
 
   async function openConversation(conv) {
     currentConversation = conv;
+
+    if (chatbox) chatbox.innerHTML = "";
+
+    renderConversations();
 
     const title = conv.isGroup
       ? conv.title || "Group"
@@ -801,9 +948,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (conv.isGroup) {
       const totalCount = conv.members?.length || 0;
-      convCount.textContent = `${totalCount} member${
-        totalCount !== 1 ? "s" : ""
-      }`;
+      convCount.textContent = `${totalCount} member${totalCount !== 1 ? "s" : ""
+        }`;
       convTitle.onclick = () => openGroupInfo(conv);
     } else {
       convCount.textContent = "";
@@ -811,58 +957,376 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (socket?.connected) socket.emit("join", { conversationId: conv.id });
+
     await loadMessages(conv.id);
+
     if (socket?.connected) socket.emit("markRead", { conversationId: conv.id });
+
+    if (window.innerWidth > 768) {
+      document.querySelector(".chat-panel").style.display = "flex";
+    }
+  }
+
+  async function refreshConversation(id) {
+    try {
+      const res = await fetch(`${API_BASE}/conversations/${id}`, {
+        headers: apiHeaders(true),
+      });
+      if (!res.ok) throw new Error("Failed to refresh conversation");
+      const updated = await res.json();
+      const index = conversations.findIndex((c) => c.id === id);
+      if (index > -1) conversations[index] = updated;
+      currentConversation = updated;
+      renderConversations();
+      openGroupInfo(updated);
+    } catch (err) {
+      console.error("refreshConversation", err);
+      showAlert("Failed to refresh group", "error");
+    }
   }
 
   function openGroupInfo(conv) {
     groupInfoModal.classList.add("active");
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
     groupInfoName.textContent = conv.title || "Group";
-    groupInfoCount.textContent = `${conv.members.length} member${
-      conv.members.length !== 1 ? "s" : ""
-    }`;
+    groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""
+      }`;
+
+    const isOwner = conv.members.find(
+      (m) => m.user.id === currentUser.id
+    )?.role === "OWNER";
+
+    if (isOwner) {
+      groupManage.style.display = "block";
+    } else {
+      groupManage.style.display = "none";
+    }
 
     groupMemberList.innerHTML = conv.members
       .map((m) => {
-        const isOwner = m.isOwner === true;
-        const name =
-          m.user?.displayName || m.user?.username || `User ${m.user?.id}`;
-        return `
-        <div class="group-member ${isOwner ? "owner" : ""}" data-userid="${
-          m.user?.id
-        }">
-          <div class="group-member-avatar">${name.charAt(0).toUpperCase()}</div>
-          <div class="group-member-name">${name}</div>
-        </div>
-      `;
+        const user = m.user;
+        if (!user) return "";
+
+        const userId = user.id;
+        const displayName =
+          user.displayName || user.username || `User ${userId}`;
+        const avatarLetter = displayName.charAt(0).toUpperCase();
+
+        const isMemberOwner = m.role === "OWNER";
+        const isYou = userId === currentUser.id;
+
+        let html = `
+        <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""
+          }" 
+             data-userid="${userId}">
+          <div class="group-member-avatar">${avatarLetter}</div>
+          <div class="group-member-info">
+            <div class="group-member-name">
+              ${displayName}
+              ${isMemberOwner ? " 👑" : ""}
+            </div>
+            ${isYou ? '<span class="you-label">(You)</span>' : ""}
+          </div>
+        `;
+
+        if (isOwner && !isYou && !isMemberOwner) {
+          html += `
+            <button class="remove-member-btn">Remove</button>
+          `;
+        }
+
+        html += `</div>`;
+
+        return html;
       })
       .join("");
 
     document.querySelectorAll(".group-member").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        const userId = e.currentTarget.dataset.userid;
-        if (userId && userId !== localStorage.getItem("userId")) {
-          openPrivateChat(userId);
+      el.querySelector(".remove-member-btn")?.addEventListener("click", async () => {
+        const confirmResult = await Swal.fire({
+          title: "Remove Member?",
+          text: "Are you sure you want to remove this member from the group?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Yes, remove",
+          cancelButtonText: "Cancel",
+        });
+
+        if (confirmResult.isConfirmed) {
+          const userId = el.dataset.userid;
+
+          try {
+            const res = await fetch(
+              `${API_BASE}/conversations/${conv.id}/members/${userId}`,
+              {
+                method: "DELETE",
+                headers: apiHeaders(true),
+              }
+            );
+
+            if (res.ok) {
+              await Swal.fire({
+                title: "Removed!",
+                text: "The member has been removed successfully.",
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+              });
+              await refreshConversation(conv.id);
+            } else {
+              Swal.fire({
+                title: "Error",
+                text: "Failed to remove member.",
+                icon: "error",
+              });
+            }
+          } catch (err) {
+            console.error(err);
+            Swal.fire({
+              title: "Error",
+              text: "An unexpected error occurred.",
+              icon: "error",
+            });
+          }
+        }
+      });
+      el.addEventListener("click", async (e) => {
+        if (e.target.classList.contains("remove-member-btn")) return;
+
+        const userId = el.dataset.userid;
+        if (userId && userId !== currentUser.id) {
+          await openOrCreatePrivateChat(userId);
+          groupInfoModal.classList.remove("active");
         }
       });
     });
+
+
+    addMemberSearch.value = "";
+    addMemberList.innerHTML = "";
+    addMemberSearch.addEventListener(
+      "input",
+      debounce(async () => {
+        const query = addMemberSearch.value.trim();
+        if (!query) {
+          addMemberList.innerHTML = "";
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`,
+            { headers: apiHeaders(true) }
+          );
+          if (!res.ok) throw new Error("Search failed");
+
+          const users = await res.json();
+          const currentIds = currentConversation.members.map(m => m.user.id);
+          const filtered = users.filter(u => !currentIds.includes(u.id));
+
+          addMemberList.innerHTML = "";
+          filtered.forEach(u => {
+            const li = document.createElement("li");
+            li.className = "add-member-item";
+            li.dataset.userid = u.id;
+
+            li.innerHTML = `
+          <div class="user-avatar">
+            ${(u.displayName || u.username).charAt(0).toUpperCase()}
+          </div>
+          <div class="user-info">
+            <div class="user-name">
+              ${u.displayName || u.username} <small>@${u.username}</small>
+            </div>
+          </div>
+          <button class="add-member-btn" title="Add to group">
+            <i class="fas fa-plus"></i>
+          </button>
+        `;
+
+            const btn = li.querySelector(".add-member-btn");
+            const clickHandler = async () => {
+              btn.disabled = true;
+              btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+              await addGroupMember(currentConversation.id, u.id);
+              btn.disabled = false;
+              btn.innerHTML = `<i class="fas fa-plus"></i>`;
+            };
+
+            li.addEventListener("click", clickHandler);
+            btn.addEventListener("click", e => {
+              e.stopPropagation();
+              clickHandler();
+            });
+
+            addMemberList.appendChild(li);
+          });
+        } catch (err) {
+          console.error("Add-member search error:", err);
+          showAlert("Search failed", "error");
+        }
+      }, 400)
+    );
+
+    updateOnlineStatuses();
+  }
+
+
+  async function addGroupMember(conversationId, userIdToAdd) {
+    const convId = Number(conversationId);
+    const userId = Number(userIdToAdd);
+
+    if (isNaN(convId) || convId <= 0) return showAlert("Invalid group", "error");
+    if (isNaN(userId) || userId <= 0) return showAlert("Invalid user", "error");
+
+    try {
+      const res = await fetch(`${API_BASE}/conversations/${convId}/members`, {
+        method: "POST",
+        headers: apiHeaders(true),
+        body: JSON.stringify({ userId }),
+      });
+
+      let errorMsg = "Could not add member";
+      if (!res.ok) {
+        let detail = "";
+        try { const err = await res.json(); detail = err.error || ""; } catch { detail = await res.text(); }
+        switch (res.status) {
+          case 400: errorMsg = detail || "Invalid request"; break;
+          case 401: errorMsg = "Please log in again"; break;
+          case 403: errorMsg = "Only owner can add members"; break;
+          case 404: errorMsg = "Group not found"; break;
+          case 500: errorMsg = "Server error"; break;
+          default: errorMsg = detail || `Error ${res.status}`;
+        }
+        return showAlert(errorMsg, "error");
+      }
+
+      const data = await res.json();
+
+      const idx = conversations.findIndex(c => c.id === convId);
+      if (idx !== -1) {
+        conversations[idx] = data.conversation;
+        renderConversations();
+      }
+
+      if (currentConversation?.id === convId) openConversation(data.conversation);
+
+      showAlert("Member added!", "success");
+
+    } catch (err) {
+      console.error("addGroupMember:", err);
+      showAlert("Network error. Check connection.", "error");
+    }
   }
 
   closeGroupInfo.onclick = () => {
     groupInfoModal.classList.remove("active");
   };
 
-  function openPrivateChat(userId) {
-    console.log("Opening private chat with user:", userId);
-    socket.emit("createPrivateConversation", { userId }, (response) => {
-      if (response?.conversation) {
-        groupInfoModal.classList.remove("active");
-        openConversation(response.conversation);
+  async function openOrCreatePrivateChat(otherUserId) {
+    if (!otherUserId || (typeof otherUserId !== 'string' && typeof otherUserId !== 'number')) {
+      showAlert("Invalid user ID", "error");
+      console.warn("openOrCreatePrivateChat: Invalid otherUserId", otherUserId);
+      return;
+    }
+
+    const userIdNum = parseInt(otherUserId, 10);
+    if (isNaN(userIdNum) || userIdNum <= 0) {
+      showAlert("Invalid user ID", "error");
+      console.warn("openOrCreatePrivateChat: Invalid number", otherUserId);
+      return;
+    }
+
+    if (userIdNum === currentUser.id) {
+      return;
+    }
+
+    const existingConv = conversations.find(
+      (c) =>
+        !c.isGroup &&
+        c.members.some((m) => parseInt(m.user.id) === userIdNum)
+    );
+
+    if (existingConv) {
+      console.log("Opening existing chat:", existingConv.id);
+      openConversation(existingConv);
+      return;
+    }
+
+    const loadingAlert = Swal.fire({
+      title: "Creating chat...",
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
       }
     });
-  }
 
+    try {
+      const res = await fetch(`${API_BASE}/conversations/one-to-one`, {
+        method: "POST",
+        headers: apiHeaders(true),
+        body: JSON.stringify({
+          otherUserId: userIdNum
+        }),
+      });
+
+      loadingAlert.close();
+
+      if (!res.ok) {
+        let errorMessage = "Could not create chat";
+
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorData.error || `Error ${res.status}`;
+        } catch {
+          errorMessage = `Server error (${res.status})`;
+        }
+
+        console.error(`API Error ${res.status}:`, errorMessage);
+        showAlert(errorMessage, "error");
+        return;
+      }
+
+      const newConv = await res.json();
+
+      if (!newConv?.id) {
+        console.error("Invalid conversation response:", newConv);
+        showAlert("Chat created but failed to load", "error");
+        return;
+      }
+
+      conversations.unshift(newConv);
+      renderConversations();
+      openConversation(newConv);
+
+      console.log("New private chat created:", newConv.id);
+
+      Swal.fire({
+        icon: "success",
+        title: "Chat created!",
+        text: "Start messaging now",
+        timer: 1000,
+        showConfirmButton: false
+      });
+
+    } catch (err) {
+      loadingAlert.close();
+
+      console.error("openOrCreatePrivateChat error:", err);
+
+      let userMessage = "Could not create chat";
+      if (err.name === "TypeError" && err.message.includes("fetch")) {
+        userMessage = "🔌 No internet connection";
+      } else if (err.message.includes("Failed to fetch")) {
+        userMessage = "🌐 Network error. Check your connection.";
+      }
+
+      showAlert(userMessage, "error");
+    }
+  }
   async function loadMessages(conversationId, limit = 50, cursor) {
     try {
       const url = new URL(
@@ -882,7 +1346,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  //  USER SEARCH FOR NEW CHAT
   searchUsersInput?.addEventListener(
     "input",
     debounce(async () => {
@@ -905,46 +1368,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         searchedUsersList.innerHTML = "";
         users.forEach((user) => {
           const li = document.createElement("li");
-          li.textContent = `${user.displayName || user.username} (@${
-            user.username
-          })`;
+          li.innerHTML = `
+            <div class="user-avatar">${(user.displayName || user.username)
+              .charAt(0)
+              .toUpperCase()}</div>
+            <div class="user-info">
+              <div class="user-name">${user.displayName || user.username
+            } (@${user.username})</div>
+            </div>
+          `;
+          li.dataset.userid = user.id;
           li.addEventListener("click", async () => {
-            console.log(`Creating 1:1 with user: ${user.username}`);
-            await createOneToOne(user.id);
+            await openOrCreatePrivateChat(user.id);
             searchedUsersList.innerHTML = "";
             searchUsersInput.value = "";
-            await loadConversations();
             if (window.innerWidth <= 768) {
               showChatPanel();
             }
           });
           searchedUsersList.appendChild(li);
         });
+        updateOnlineStatuses();
       } catch (err) {
         console.error("User search failed", err);
       }
     })
   );
 
-  async function createOneToOne(otherUserId) {
-    try {
-      const res = await fetch(`${API_BASE}/conversations/one-to-one`, {
-        method: "POST",
-        headers: apiHeaders(true),
-        body: JSON.stringify({ otherUserId }),
-      });
-      if (!res.ok)
-        throw new Error((await res.json()).message || "Cannot create 1:1");
-      const conv = await res.json();
-      await loadConversations();
-      openConversation(conv);
-    } catch (err) {
-      console.error("createOneToOne", err);
-      showAlert("Create one-to-one failed: " + err.message, "error");
-    }
-  }
-
-  //  GROUP
   openGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "flex";
     selectedGroupMembers = [];
@@ -983,9 +1433,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         users.forEach((user) => {
           if (selectedGroupMembers.some((m) => m.id === user.id)) return;
           const li = document.createElement("li");
-          li.textContent = `${user.displayName || user.username} (@${
-            user.username
-          })`;
+          li.innerHTML = `
+            <div class="user-avatar">${(user.displayName || user.username)
+              .charAt(0)
+              .toUpperCase()}</div>
+            <div class="user-info">
+              <div class="user-name">${user.displayName || user.username
+            } (@${user.username})</div>
+            </div>
+          `;
+          li.dataset.userid = user.id;
           li.addEventListener("click", () => {
             selectedGroupMembers.push(user);
             renderSelectedMembers();
@@ -994,6 +1451,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           groupMembersList.appendChild(li);
         });
+        updateOnlineStatuses();
       } catch (err) {
         console.error("Group member search failed", err);
       }
@@ -1060,7 +1518,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  //  BOOTSTRAP
+  async function loadSuggestedUsers() {
+    try {
+      const res = await fetch(`${API_BASE}/conversations/users/suggested`, {
+        headers: apiHeaders(true),
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch suggested users");
+      const users = await res.json();
+
+      const existingUserIds = conversations.flatMap((c) =>
+        c.members.map((m) => m.user.id)
+      );
+      const filteredUsers = users.filter(
+        (u) => !existingUserIds.includes(u.id)
+      );
+
+      const suggestedList = document.getElementById("suggestedUsersList");
+      suggestedList.innerHTML = "";
+
+      filteredUsers.forEach((user) => {
+        const li = document.createElement("li");
+        li.classList.add("suggested-user-item");
+        li.dataset.userid = user.id;
+
+        li.innerHTML = `
+        <div class="conv-avatar">${(user.displayName || user.username)
+            .charAt(0)
+            .toUpperCase()}</div>
+        <span>${user.displayName || user.username}</span>
+      `;
+
+        li.addEventListener("click", async () => {
+          await openOrCreatePrivateChat(user.id);
+          document.getElementById("suggestedUsersContainer").style.display =
+            "none";
+        });
+
+        suggestedList.appendChild(li);
+      });
+
+      document.getElementById("suggestedUsersContainer").style.display =
+        filteredUsers.length > 0 ? "block" : "none";
+      updateOnlineStatuses();
+    } catch (err) {
+      console.error("loadSuggestedUsers:", err);
+    }
+  }
+
   token = localStorage.getItem("token");
   const storedUser = localStorage.getItem("user");
   if (token && storedUser) {

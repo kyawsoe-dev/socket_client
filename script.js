@@ -123,32 +123,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addMemberList = document.getElementById("addMemberList");
 
 
-  // ---------------------------------------------------------------
-  //  SUGGESTED USERS PANEL – SHOW / HIDE TOGGLE (works on desktop too)
-  // ---------------------------------------------------------------
   const suggestedContainer = document.getElementById("suggestedUsersContainer");
   const toggleBtn = document.getElementById("toggleSuggestedBtn");
 
   if (toggleBtn && suggestedContainer) {
-    const isLargeScreen = () => window.innerWidth > 768;
-
-    // ----- 1. Load saved state (desktop also respects it now) -----
     const saved = localStorage.getItem("suggestedPanelOpen");
     const savedOpen = saved === "true";
-
-    // ----- 2. Initial visibility -----
-    //   • Desktop: open by default **or** respect saved state
-    //   • Mobile : respect saved state (default = closed)
-    const shouldBeOpen = isLargeScreen()
-      ? (savedOpen ?? true)          // default true on desktop
-      : (savedOpen ?? false);        // default false on mobile
+    const shouldBeOpen = savedOpen; 
 
     suggestedContainer.classList.toggle("active", shouldBeOpen);
     toggleBtn.innerHTML = shouldBeOpen
       ? '<i class="fas fa-user-minus"></i>'
       : '<i class="fas fa-user-plus"></i>';
 
-    // ----- 3. Click handler (same for every screen size) -----
     toggleBtn.addEventListener("click", () => {
       const willBeOpen = !suggestedContainer.classList.contains("active");
       suggestedContainer.classList.toggle("active", willBeOpen);
@@ -156,26 +143,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? '<i class="fas fa-user-minus"></i>'
         : '<i class="fas fa-user-plus"></i>';
 
-      // Persist the choice for *both* desktop and mobile
       localStorage.setItem("suggestedPanelOpen", willBeOpen);
     });
 
-    // ----- 4. Resize handling (keeps state in sync) -----
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const nowLarge = isLargeScreen();
         const savedOpen = localStorage.getItem("suggestedPanelOpen") === "true";
-
-        // When we cross the breakpoint we **respect the saved preference**
-        // (desktop default = open, mobile default = closed)
-        const targetOpen = nowLarge
-          ? (savedOpen ?? true)
-          : (savedOpen ?? false);
-
-        suggestedContainer.classList.toggle("active", targetOpen);
-        toggleBtn.innerHTML = targetOpen
+        suggestedContainer.classList.toggle("active", savedOpen);
+        toggleBtn.innerHTML = savedOpen
           ? '<i class="fas fa-user-minus"></i>'
           : '<i class="fas fa-user-plus"></i>';
       }, 150);

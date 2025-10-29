@@ -1320,6 +1320,30 @@ body {
   flex-direction: row-reverse;
 }
 
+.edit-message-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  outline: none;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.edit-message-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background-color: #ffffff;
+}
+
+.edit-message-input::selection {
+  background-color: #93c5fd;
+  color: #ffffff;
+}
+
 .bubble {
   max-width: 70%;
   padding: 12px 16px;

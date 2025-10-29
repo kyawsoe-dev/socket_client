@@ -822,7 +822,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function editMessage(id, bubbleEl) {
     const textEl = bubbleEl.querySelector(".text");
     const original = textEl.textContent;
-    textEl.innerHTML = `<input type="text" value="${original}" />`;
+    textEl.innerHTML = `<input type="text" class="edit-message-input" value="${original}" />`;
     const input = textEl.querySelector("input");
     input.focus();
     input.onblur = async () => {

@@ -364,54 +364,95 @@ body {
   left: -260px;
   width: 260px;
   height: 100%;
-  background: #fff;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-  transition: left 0.3s;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 999;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .me-drawer.open {
   left: 0;
 }
 
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .drawer-avatar {
-  width: 60px;
-  height: 60px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  background-color: #1976d2;
+  background: linear-gradient(135deg, #1976d2, #2196f3);
   color: #fff;
-  font-size: 24px;
+  font-size: 26px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  flex-shrink: 0;
+}
+
+.drawer-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(25, 118, 210, 0.4);
+}
+
+.drawer-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.drawer-name {
+  font-weight: 700;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.drawer-username {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.drawer-email {
+  font-size: 13px;
+  color: #9ca3af;
+  word-break: break-all;
+}
+
+.drawer-logout-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.drawer-name {
-  font-weight: 600;
-  font-size: 18px;
-}
-
-.drawer-username {
-  font-size: 14px;
-  color: #555;
-}
-
-.drawer-logout-btn {
-  background-color: #e53e3e;
-  color: #fff;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
+.drawer-logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
 }
 
 .drawer-logout-btn i {
   margin-right: 6px;
+  font-size: 16px;
 }
 
 .conversations-section {

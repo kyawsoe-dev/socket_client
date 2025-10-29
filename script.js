@@ -644,6 +644,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     drawerName.textContent = displayName;
     drawerUsername.textContent = `@${user.username}`;
 
+    const drawerEmail = document.getElementById("drawerEmail");
+    if (drawerEmail) {
+      drawerEmail.textContent = user.email || "";
+    }
+
     connectSocket();
     await loadConversations();
     await loadSuggestedUsers();
@@ -674,6 +679,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.warn("Drawer elements not found, skipping drawer initialization");
     }
   }
+
 
 
   messageForm?.addEventListener("submit", (e) => {

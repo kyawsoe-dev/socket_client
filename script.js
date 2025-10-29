@@ -1,8 +1,5 @@
-// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
-
-const API_BASE = "http://localhost:3000/api/v1";
-const SOCKET_URL = "http://localhost:3000";
+const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
 let socket = null;
 let currentUser = null;
@@ -445,7 +442,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("Showing chat panel");
     document.querySelector(".sidebar").style.display = "none";
     document.querySelector(".chat-panel").classList.add("active");
-    if (backBtn) backBtn.style.display = "inline-flex";
+    backBtn.style.display = "inline-flex";
+    history.pushState({ chatOpen: true }, "");
   }
 
   backBtn?.addEventListener("click", () => {
@@ -462,9 +460,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (chatbox) chatbox.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
+    history.back();
   });
 
-  const convMembers = document.getElementById("convMembers");
+  // Handle browser back button
+  window.addEventListener('popstate', (event) => {
+    if (document.querySelector(".chat-panel").classList.contains("active")) {
+      backBtn.click();
+    } else if (event.state && event.state.chatOpen) {
+      history.pushState({ chatOpen: true }, "");
+    }
+  });
+
   const header = document.querySelector(".chat-header-title");
 
   if (header) {
@@ -1115,7 +1122,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.innerWidth > 768) {
       document.querySelector(".chat-panel").style.display = "flex";
     }
+
+    addMessageScrollListener();
+
   }
+
+  // Infinite scroll for messages
+  function addMessageScrollListener() {
+    chatbox.removeEventListener('scroll', handleMessageScroll);
+    chatbox.addEventListener('scroll', handleMessageScroll);
+  }
+
+
+  let loadingMoreMessages = false;
+  async function handleMessageScroll() {
+    if (loadingMoreMessages) return;
+
+    const scrollTop = chatbox.scrollTop;
+    if (scrollTop < 100 && currentConversation) {
+      const cursor = messagesCursorMap[currentConversation.id];
+      if (cursor) {
+        loadingMoreMessages = true;
+        const currentScrollHeight = chatbox.scrollHeight;
+        await loadMessages(currentConversation.id, 50, cursor);
+        chatbox.scrollTop = chatbox.scrollHeight - currentScrollHeight;
+        loadingMoreMessages = false;
+      }
+    }
+  }
+
 
   async function refreshConversation(id) {
     try {
@@ -1726,6 +1761,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAuthView();
     }
   } else showAuthView();
+
+  let originalHeight = window.innerHeight;
+  window.addEventListener('resize', () => {
+    if (window.innerHeight < originalHeight) {
+      chatbox.style.paddingBottom = '0';
+      scrollToBottom(chatbox);
+    } else {
+      originalHeight = window.innerHeight;
+    }
+  });
 });
 
 if ("serviceWorker" in navigator) {

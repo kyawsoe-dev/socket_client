@@ -44,7 +44,7 @@ body {
 .auth-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  padding: 2.5rem;
+  padding: 2rem;
   border-radius: 2rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   max-width: 420px;
@@ -53,13 +53,15 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   z-index: 1;
+  margin: 2rem auto;
+  box-sizing: border-box;
 }
 
 .auth-card h2 {
   color: #000;
   margin-bottom: 8px;
   font-weight: 500;
-  font-size: 28px;
+  font-size: 25px;
   text-align: center;
 }
 
@@ -1437,6 +1439,17 @@ body {
   }
 }
 
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .chat-input {
   display: flex;
   align-items: center;
@@ -1821,28 +1834,43 @@ body {
     font-size: 14px;
     margin: 0 6px 0 0;
   }
+
   .message.right .avatar {
     margin: 0 0 0 6px;
   }
+
   .conv-avatar {
     width: 32px;
     height: 32px;
     font-size: 14px;
   }
+
   .auth-card {
     padding: 1.5rem;
+    border-radius: 1.5rem;
+    width: 95%;
   }
+
   .tab-btn {
     padding: 8px 0;
     font-size: 14px;
   }
+
   .auth-form input {
     padding: 10px;
     font-size: 14px;
   }
+
   .primary-btn,
   .secondary-btn {
     padding: 10px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .auth-card {
+    padding: 2rem;
+    width: 90%;
   }
 }
 

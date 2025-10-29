@@ -58,7 +58,7 @@ body {
 .auth-card h2 {
   color: #000;
   margin-bottom: 8px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 28px;
   text-align: center;
 }
@@ -66,7 +66,7 @@ body {
 .logo-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .auth-logo {
@@ -339,32 +339,79 @@ body {
   font-size: 16px;
 }
 
-.logout-btn {
-  display: inline-flex;
+/* Drawer styling */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s;
+  z-index: 998;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.me-drawer {
+  position: fixed;
+  top: 0;
+  left: -260px; /* hidden initially */
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  transition: left 0.3s;
+  z-index: 999;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.me-drawer.open {
+  left: 0;
+}
+
+.drawer-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #1976d2;
+  color: #fff;
+  font-size: 24px;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  justify-content: center;
+}
+
+.drawer-name {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.drawer-username {
   font-size: 14px;
-  cursor: pointer;
+  color: #555;
+}
+
+.drawer-logout-btn {
+  background-color: #e53e3e;
+  color: #fff;
   border: none;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.8);
-  color: #0088cc;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 136, 204, 0.2);
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.logout-btn:hover {
-  background: #0088cc;
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
-}
-
-.logout-btn i {
-  font-size: 16px;
+.drawer-logout-btn i {
+  margin-right: 6px;
 }
 
 .conversations-section {
@@ -573,6 +620,20 @@ body {
   align-items: center;
 }
 
+.conv-meta .preview {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-meta .time {
+  font-size: 12px;
+  color: #8e8e93;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
 .suggested-right {
   position: fixed;
   right: 0;
@@ -639,6 +700,7 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  gap: 8px;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1074,13 +1136,6 @@ body {
   border: 2px solid #fff;
 }
 
-.group-member-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: #000;
-  flex: 1;
-}
-
 .group-member-info {
   display: flex;
   flex-direction: column;
@@ -1094,7 +1149,19 @@ body {
   font-size: 15px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 100px;
+}
+
+.owner-badge {
+  font-weight: 500;
+  font-size: 12px;
+  color: #f59e0b;
+  background: #fff3cd;
+  border-radius: 12px;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .group-member.owner .group-member-name {
@@ -1239,23 +1306,33 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.message.right:hover .edit-btn {
+.message.right:hover .edit-btn,
+.message.right:hover .delete-btn {
   display: block;
 }
 
-.edit-btn {
+.edit-btn,
+.delete-btn {
   display: none;
   background: none;
   border: none;
   color: #fff;
   cursor: pointer;
   position: absolute;
-  right: 10px;
   top: 10px;
   font-size: 14px;
 }
 
-.edit-btn:hover {
+.edit-btn {
+  right: 30px;
+}
+
+.delete-btn {
+  right: 10px;
+}
+
+.edit-btn:hover,
+.delete-btn:hover {
   color: #ddd;
 }
 
@@ -1728,6 +1805,8 @@ body {
 
   .suggested-user-item {
     justify-content: flex-start;
+    gap: 10px;
+    font-weight: bold;
   }
 
   #suggestedUsersContainer {

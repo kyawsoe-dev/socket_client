@@ -75,18 +75,33 @@
     <div class="chat-container">
       <div class="sidebar">
         <div class="sidebar-header">
-          <div class="me-section">
+          <div id="meSection" class="me-section">
             <div id="meAvatar" class="me-avatar"></div>
             <span id="meDisplay" class="me-display"></span>
           </div>
 
-          <button id="logoutBtn" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Logout
-          </button>
           <button id="toggleSuggestedBtn" class="icon-btn" title="Toggle suggested users">
             <i class="fas fa-user-plus"></i>
           </button>
         </div>
+
+        <!-- Drawer -->
+        <div id="drawerOverlay" class="drawer-overlay"></div>
+
+        <div id="meDrawer" class="me-drawer">
+          <div class="drawer-header">
+            <div id="drawerAvatar" class="drawer-avatar"></div>
+            <div class="drawer-info">
+              <div id="drawerName" class="drawer-name"></div>
+              <div id="drawerUsername" class="drawer-username"></div>
+            </div>
+          </div>
+
+          <button id="drawerLogoutBtn" class="drawer-logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+
         <div class="conversations-section">
           <button id="openGroupModalBtn" class="new-chat-btn">
             Create New Group

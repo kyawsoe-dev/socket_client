@@ -1,8 +1,8 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
-// const API_BASE = "http://localhost:3000/api/v1";
-// const SOCKET_URL = "http://localhost:3000";
+const API_BASE = "http://localhost:3000/api/v1";
+const SOCKET_URL = "http://localhost:3000";
 
 let socket = null;
 let currentUser = null;
@@ -15,10 +15,11 @@ let lastTypingEmit = 0;
 let receivedMessages = new Set();
 let selectedGroupMembers = [];
 let onlineUsers = new Set();
+let lastActiveMap = new Map();
 
 const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
-const typingSound = new Audio("/assets/audio/typing1.mp3");
+const typingSound = new Audio("/assets/audio/typing.mp3");
 
 function apiHeaders(withAuth = true) {
   const headers = { "Content-Type": "application/json" };
@@ -28,10 +29,22 @@ function apiHeaders(withAuth = true) {
 
 function formatTime(iso) {
   try {
-    return new Date(iso).toLocaleTimeString([], {
+    const date = new Date(iso);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const timeStr = date.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
+    if (isToday) {
+      return timeStr;
+    } else {
+      const dateStr = date.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+      });
+      return `${dateStr} ${timeStr}`;
+    }
   } catch {
     return "";
   }
@@ -122,6 +135,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addMemberSearch = document.getElementById("addMemberSearch");
   const addMemberList = document.getElementById("addMemberList");
 
+  const meSection = document.getElementById("meSection");
+  const meDrawer = document.getElementById("meDrawer");
+  const drawerOverlay = document.getElementById("drawerOverlay");
+  const drawerAvatar = document.getElementById("drawerAvatar");
+  const drawerName = document.getElementById("drawerName");
+  const drawerUsername = document.getElementById("drawerUsername");
+  const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
+
 
   const suggestedContainer = document.getElementById("suggestedUsersContainer");
   const toggleBtn = document.getElementById("toggleSuggestedBtn");
@@ -129,7 +150,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (toggleBtn && suggestedContainer) {
     const saved = localStorage.getItem("suggestedPanelOpen");
     const savedOpen = saved === "true";
-    const shouldBeOpen = savedOpen; 
+    const shouldBeOpen = savedOpen;
 
     suggestedContainer.classList.toggle("active", shouldBeOpen);
     toggleBtn.innerHTML = shouldBeOpen
@@ -481,6 +502,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
+    socket.on("message deleted", (id) => {
+      const el = chatbox.querySelector(`[data-msg-id="${id}"]`);
+      if (el) {
+        updateDeletedMessage(el);
+      }
+    });
+
     socket.on("typing", ({ conversationId, username }) => {
       if (
         currentConversation &&
@@ -516,28 +544,70 @@ document.addEventListener("DOMContentLoaded", async () => {
     socket.on("users online", (ids) => {
       onlineUsers = new Set(ids);
       updateOnlineStatuses();
+      updateConvStatus();
     });
 
     socket.on("user online", ({ userId }) => {
       onlineUsers.add(userId);
       updateOnlineStatuses();
+      updateConvStatus();
     });
 
-    socket.on("user offline", ({ userId }) => {
+    socket.on("user offline", async ({ userId }) => {
       onlineUsers.delete(userId);
       updateOnlineStatuses();
+      await handleUserOffline(userId);
+      updateConvStatus();
     });
+  }
+
+  async function handleUserOffline(userId) {
+    if (currentConversation && !currentConversation.isGroup) {
+      const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
+      if (other && other.user.id === userId) {
+        try {
+          const res = await fetch(`${API_BASE}/users/${userId}`, {
+            headers: apiHeaders(true),
+          });
+          if (res.ok) {
+            const fullUser = await res.json();
+            lastActiveMap.set(userId, fullUser.lastActive);
+          }
+        } catch (err) {
+          console.error("Failed to fetch last active:", err);
+        }
+      }
+    }
   }
 
   function updateOnlineStatuses() {
     document.querySelectorAll("[data-userid]").forEach((el) => {
       const userId = Number(el.dataset.userid);
-      if (onlineUsers.has(userId)) {
-        el.classList.add("online");
-      } else {
-        el.classList.remove("online");
-      }
+      el.classList.toggle("online", onlineUsers.has(userId));
     });
+  }
+
+  function updateConvStatus() {
+    if (!currentConversation || !convCount) return;
+
+    if (currentConversation.isGroup) {
+      const total = currentConversation.members.length;
+      const onlineCount = currentConversation.members.filter(m => onlineUsers.has(m.user.id)).length;
+      convCount.textContent = `${total} member${total > 1 ? 's' : ''}, ${onlineCount} online`;
+    } else {
+      const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
+      if (other) {
+        const id = other.user.id;
+        if (onlineUsers.has(id)) {
+          convCount.textContent = "Online";
+        } else {
+          const lastActive = lastActiveMap.get(id);
+          convCount.textContent = lastActive ? `Last seen ${formatTime(lastActive)}` : "Offline";
+        }
+      } else {
+        convCount.textContent = "";
+      }
+    }
   }
 
   function appendSystemMessage(text) {
@@ -549,11 +619,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function initAfterAuth() {
-    if (!token || !currentUser) return;
+    const user = JSON.parse(localStorage.getItem("user")) || null;
+    if (!token || !user) return;
 
     showMainView();
 
-    const displayName = currentUser.displayName || currentUser.username;
+    const displayName = user.displayName || user.username;
     meDisplay.textContent = displayName;
 
     const meAvatar = document.getElementById("meAvatar");
@@ -561,10 +632,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       meAvatar.textContent = displayName.charAt(0).toUpperCase();
     }
 
+    // Drawer
+    drawerAvatar.textContent = displayName.charAt(0).toUpperCase();
+    drawerName.textContent = displayName;
+    drawerUsername.textContent = `@${user.username}`;
+
     connectSocket();
-
     await loadConversations();
-
     await loadSuggestedUsers();
 
     if (!conversations || conversations.length === 0) {
@@ -572,7 +646,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
+
+    if (meSection && meDrawer && drawerOverlay && drawerLogoutBtn) {
+      meSection.addEventListener("click", () => {
+        meDrawer.classList.add("open");
+        drawerOverlay.classList.add("open");
+      });
+
+      drawerOverlay.addEventListener("click", () => {
+        meDrawer.classList.remove("open");
+        drawerOverlay.classList.remove("open");
+      });
+
+      drawerLogoutBtn.addEventListener("click", () => {
+        clearAuth();
+        if (socket) socket.disconnect();
+        location.reload();
+      });
+    } else {
+      console.warn("Drawer elements not found, skipping drawer initialization");
+    }
   }
+
 
   messageForm?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -698,6 +793,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
       editBtn.onclick = () => editMessage(msg.id, bubble);
       el.appendChild(editBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+      deleteBtn.onclick = () => deleteMessage(msg.id, el);
+      el.appendChild(deleteBtn);
     }
 
     if (optimistic) el.style.opacity = "0.7";
@@ -713,6 +814,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     input.focus();
     input.onblur = async () => {
       const newContent = input.value.trim();
+      console.log(newContent, "new content")
       if (newContent === original) {
         textEl.textContent = original;
         return;
@@ -733,6 +835,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             headers: apiHeaders(true),
             body: JSON.stringify({ content: newContent }),
           });
+          console.log(res, "edit response");
           if (res.ok) {
             textEl.textContent = newContent;
           } else {
@@ -740,7 +843,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             showAlert("Edit failed", "error");
           }
         }
-      } catch {
+      } catch (e) {
+        console.log(e, "edit, error")
         textEl.textContent = original;
         showAlert("Edit failed", "error");
       }
@@ -751,6 +855,54 @@ document.addEventListener("DOMContentLoaded", async () => {
         textEl.textContent = original;
       }
     };
+  }
+
+  function deleteMessage(id, msgEl) {
+    Swal.fire({
+      title: "Delete message?",
+      text: "This will delete the message for everyone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (socket.connected) {
+          socket.emit("delete message", { messageId: id }, (ack) => {
+            if (ack.success) {
+              updateDeletedMessage(msgEl);
+            } else {
+              showAlert(ack.error || "Delete failed", "error");
+            }
+          });
+        } else {
+          fetch(`${API_BASE}/conversations/messages/${id}`, {
+            method: "DELETE",
+            headers: apiHeaders(true),
+          })
+            .then((res) => {
+              if (res.ok) {
+                updateDeletedMessage(msgEl);
+              } else {
+                showAlert("Delete failed", "error");
+              }
+            })
+            .catch(() => showAlert("Delete failed", "error"));
+        }
+      }
+    });
+  }
+
+  function updateDeletedMessage(el) {
+    const text = el.querySelector(".text");
+    text.textContent = "This message was deleted";
+    text.style.fontStyle = "italic";
+    text.style.color = "#8e8e93";
+    const time = el.querySelector(".timestamp");
+    time.textContent += " (deleted)";
+    el.querySelector(".edit-btn")?.remove();
+    el.querySelector(".delete-btn")?.remove();
   }
 
   function replaceOptimisticMessage(tmpId, realMsg) {
@@ -871,6 +1023,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? c.lastMessage.content.slice(0, 50) + "..."
         : "";
 
+      const time = c.lastMessage ? formatTime(c.lastMessage.createdAt) : "";
+
       if (!c.isGroup) {
         const other = c.members.find((m) => m.user.id !== currentUser.id);
         li.dataset.userid = other?.user.id;
@@ -880,7 +1034,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       <div class="conv-avatar">${title.charAt(0).toUpperCase()}</div>
       <div class="conv-info">
         <div class="conv-title">${title}</div>
-        <div class="conv-meta">${preview}</div>
+        <div class="conv-meta">
+          <span class="preview">${preview}</span>
+          <span class="time">${time}</span>
+        </div>
       </div>
     `;
 
@@ -924,12 +1081,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     convAvatar.textContent = title.charAt(0).toUpperCase();
 
     if (conv.isGroup) {
-      const totalCount = conv.members?.length || 0;
-      convCount.textContent = `${totalCount} member${totalCount !== 1 ? "s" : ""
-        }`;
       convTitle.onclick = () => openGroupInfo(conv);
     } else {
-      convCount.textContent = "";
       convTitle.onclick = null;
     }
 
@@ -938,6 +1091,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadMessages(conv.id);
 
     if (socket?.connected) socket.emit("markRead", { conversationId: conv.id });
+
+    if (!conv.isGroup) {
+      const other = conv.members.find((m) => m.user.id !== currentUser.id);
+      if (other && !lastActiveMap.has(other.user.id)) {
+        try {
+          const res = await fetch(`${API_BASE}/conversations/user/${other.user.id}`, {
+            headers: apiHeaders(true),
+          });
+          if (res.ok) {
+            const fullUser = await res.json();
+            lastActiveMap.set(other.user.id, fullUser.data.lastActive);
+          }
+        } catch (err) {
+          console.error("Failed to fetch user last active:", err);
+        }
+      }
+    }
+
+
+    updateConvStatus();
 
     if (window.innerWidth > 768) {
       document.querySelector(".chat-panel").style.display = "flex";
@@ -993,28 +1166,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         const isYou = userId === currentUser.id;
 
         let html = `
-        <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""
-          }" 
-             data-userid="${userId}">
-          <div class="group-member-avatar">${avatarLetter}</div>
-          <div class="group-member-info">
-            <div class="group-member-name">
-              ${displayName}
-              ${isMemberOwner ? " 👑" : ""}
+          <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""}" 
+              data-userid="${userId}">
+            <div class="group-member-avatar">${avatarLetter}</div>
+            <div class="group-member-info">
+              <div class="group-member-name">
+                ${displayName}
+                ${isMemberOwner ? '<span class="owner-badge">👑 Owner</span>' : ""}
+              </div>
+              ${isYou ? '<span class="you-label">(You)</span>' : ""}
             </div>
-            ${isYou ? '<span class="you-label">(You)</span>' : ""}
-          </div>
-        `;
+          `;
 
         if (isOwner && !isYou && !isMemberOwner) {
-          html += `
-            <button class="remove-member-btn">Remove</button>
-          `;
+          html += `<button class="remove-member-btn">Remove</button>`;
         }
 
         html += `</div>`;
 
         return html;
+
       })
       .join("");
 
@@ -1296,15 +1467,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       let userMessage = "Could not create chat";
       if (err.name === "TypeError" && err.message.includes("fetch")) {
-        userMessage = "🔌 No internet connection";
+        userMessage = "No internet connection";
       } else if (err.message.includes("Failed to fetch")) {
-        userMessage = "🌐 Network error. Check your connection.";
+        userMessage = "Network error. Check your connection.";
       }
 
       showAlert(userMessage, "error");
     }
   }
-  async function loadMessages(conversationId, limit = 50, cursor) {
+  async function loadMessages(conversationId, limit = 100, cursor) {
     try {
       const url = new URL(
         `${API_BASE}/conversations/${conversationId}/messages`
@@ -1520,11 +1691,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         li.dataset.userid = user.id;
 
         li.innerHTML = `
-        <div class="conv-avatar">${(user.displayName || user.username)
-            .charAt(0)
-            .toUpperCase()}</div>
-        <span>${user.displayName || user.username}</span>
-      `;
+          <div class="conv-avatar">
+            ${(user.displayName || user.username).charAt(0).toUpperCase()}
+          </div>
+          <span>${user.displayName ? `${user.displayName} (@${user.username})` : user.username}</span>
+        `;
+
 
         li.addEventListener("click", async () => {
           await openOrCreatePrivateChat(user.id);

@@ -26,7 +26,6 @@ body {
   justify-content: center;
   width: 100%;
   height: 100vh;
-  background: linear-gradient(135deg, #0088cc 0%, #00c6ff 100%);
   position: relative;
 }
 
@@ -37,18 +36,17 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
   pointer-events: none;
 }
 
 .auth-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  padding: 2rem;
+  padding: 2.5rem;
   border-radius: 2rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  max-width: 420px;
   width: 90%;
+  max-width: 420px;
   animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
@@ -341,7 +339,7 @@ body {
   font-size: 16px;
 }
 
-/* Drawer styling */
+/* Drawer */
 .drawer-overlay {
   position: fixed;
   top: 0;
@@ -363,7 +361,7 @@ body {
 .me-drawer {
   position: fixed;
   top: 0;
-  left: -260px; /* hidden initially */
+  left: -260px;
   width: 260px;
   height: 100%;
   background: #fff;
@@ -1198,9 +1196,11 @@ body {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .add-member-btn:hover {
   background: #006ba3;
 }
+
 .add-member-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -1292,14 +1292,14 @@ body {
 .message.left .bubble {
   background: white;
   color: #000;
-  border-bottom-right-radius: 4px;
+  border-bottom-left-radius: 4px;
   margin-left: 8px;
 }
 
 .message.right .bubble {
   background: linear-gradient(135deg, #0088cc, #00c6ff);
   color: white;
-  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
   margin-right: 8px;
 }
 
@@ -1318,7 +1318,7 @@ body {
   display: none;
   background: none;
   border: none;
-  color: #fff;
+  color: #7b66ad;
   cursor: pointer;
   position: absolute;
   top: 10px;
@@ -1757,32 +1757,39 @@ body {
     height: 100vh;
     overflow: hidden;
   }
+
   .sidebar {
     width: 100%;
     min-width: auto;
     height: 100%;
     display: block;
   }
+
   .chat-panel {
     display: none;
     width: 100%;
     height: 100%;
   }
+
   .chat-panel.active {
     display: flex;
   }
+
   .chat-panel.active .back-btn {
     display: inline-flex !important;
   }
+
   .conversations-section {
     flex-direction: row;
     gap: 5px;
   }
+
   .new-chat-btn {
     flex: 1;
     font-size: 14px;
     padding: 6px;
   }
+
   .search-input {
     margin: 8px;
     font-size: 14px;
@@ -1791,13 +1798,16 @@ body {
   .conversations-list {
     max-height: none;
   }
+
   .chat-messages {
     flex: 1 1 auto;
   }
+
   .chat-input {
     padding: 8px;
     gap: 5px;
   }
+
   .emoji-btn,
   .send-btn {
     width: 40px;
@@ -1846,8 +1856,8 @@ body {
   }
 
   .auth-card {
-    padding: 1.5rem;
-    border-radius: 1.5rem;
+    padding: 1rem;
+    border-radius: 1rem;
     width: 95%;
   }
 
@@ -1867,10 +1877,20 @@ body {
   }
 }
 
+@media (min-width: 361px) and (max-width: 480px) {
+  .auth-card {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+    width: 95%;
+  }
+}
+
 @media (min-width: 481px) and (max-width: 768px) {
   .auth-card {
-    padding: 2rem;
+    padding: 1.75rem;
+    border-radius: 1.75rem;
     width: 90%;
+    max-width: 400px;
   }
 }
 

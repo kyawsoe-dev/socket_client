@@ -1,9 +1,5 @@
-// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
-
-const API_BASE = "http://localhost:3000/api/v1";
-const SOCKET_URL = "http://localhost:3000";
-
+const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
 let socket = null;
 let currentUser = null;
@@ -880,7 +876,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault(); 
+        e.preventDefault();
         textarea.blur();
       }
       if (e.key === "Escape") {

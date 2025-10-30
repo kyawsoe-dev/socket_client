@@ -136,8 +136,9 @@ body {
 }
 
 .auth-form input {
-  padding: 16px 20px;
-  border-radius: 16px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
   border: 1.5px solid rgba(0, 0, 0, 0.1);
   font-size: 16px;
   background: rgba(255, 255, 255, 0.8);
@@ -352,7 +353,6 @@ body {
   transition: opacity 0.3s;
   z-index: 998;
 }
-
 .drawer-overlay.open {
   opacity: 1;
   visibility: visible;
@@ -361,8 +361,8 @@ body {
 .me-drawer {
   position: fixed;
   top: 0;
-  left: -260px;
-  width: 260px;
+  left: -280px;
+  width: 280px;
   height: 100%;
   background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
@@ -371,11 +371,10 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  justify-content: space-between;
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
 }
-
 .me-drawer.open {
   left: 0;
 }
@@ -385,7 +384,6 @@ body {
   align-items: center;
   gap: 14px;
 }
-
 .drawer-avatar {
   width: 68px;
   height: 68px;
@@ -399,38 +397,73 @@ body {
   justify-content: center;
   box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  flex-shrink: 0;
 }
-
 .drawer-avatar:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 14px rgba(25, 118, 210, 0.4);
 }
-
 .drawer-info {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
 }
-
 .drawer-name {
   font-weight: 700;
   font-size: 18px;
   color: #1f2937;
 }
-
 .drawer-username {
   font-size: 14px;
   color: #6b7280;
 }
-
 .drawer-email {
   font-size: 13px;
   color: #9ca3af;
   word-break: break-all;
 }
 
+.drawer-menu {
+  list-style: none;
+  margin: 24px 0;
+  padding: 0;
+  flex: 1;
+}
+.drawer-menu li {
+  display: flex;
+  align-items: center;
+  padding: 20px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.drawer-menu li i {
+  color: #1976d2;
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+}
+.drawer-menu li:hover {
+  background: rgba(25, 118, 210, 0.08);
+  transform: translateX(3px);
+}
+
+.drawer-divider {
+  border: none;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 10px 0 16px;
+}
+
+.drawer-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
 .drawer-logout-btn {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
@@ -439,20 +472,34 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.3s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.3s ease, transform 0.2s ease;
+  width: 100%;
 }
-
 .drawer-logout-btn:hover {
   background: linear-gradient(135deg, #dc2626, #b91c1c);
   transform: translateY(-2px);
 }
-
 .drawer-logout-btn i {
   margin-right: 6px;
   font-size: 16px;
+}
+.drawer-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+  gap: 2px;
+}
+.drawer-meta .app-version {
+  font-weight: 500;
+}
+.drawer-meta .rights-text {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .conversations-section {
@@ -1123,6 +1170,12 @@ body {
   flex: 1;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
 .group-info-title h3 {
   margin: 0;
   font-size: 18px;
@@ -1134,6 +1187,48 @@ body {
   margin: 4px 0 0;
   color: #8e8e93;
   font-size: 14px;
+}
+
+.title-actions {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.title-row:hover .title-actions {
+  display: flex;
+}
+
+.title-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 4px;
+  color: #6b7280;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.title-btn:hover {
+  transform: scale(1.1);
+}
+
+#editGroupTitleBtn:hover {
+  color: #2563eb;
+}
+
+#saveGroupTitleBtn {
+  color: #28a745;
+}
+
+#saveGroupTitleBtn:hover {
+  color: #1e7e34;
+}
+
+#groupInfoName[contenteditable="true"] {
+  border-bottom: 1px dashed #2563eb;
+  padding-right: 4px;
+  outline: none;
 }
 
 .close-btn {
@@ -1225,9 +1320,7 @@ body {
   font-weight: 500;
   font-size: 12px;
   color: #f59e0b;
-  background: #fff3cd;
   border-radius: 12px;
-  padding: 2px 6px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -1428,11 +1521,6 @@ body {
 
 .delete-btn {
   right: 10px;
-}
-
-.edit-btn:hover,
-.delete-btn:hover {
-  color: #ddd;
 }
 
 .username {

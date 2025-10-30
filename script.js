@@ -101,6 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logoutBtn");
   const conversationsList = document.getElementById("conversationsList");
   const openGroupModalBtn = document.getElementById("openGroupModalBtn");
+  const drawerNewGroup = document.getElementById("drawerNewGroup");
   const searchUsersInput = document.getElementById("searchUsersInput");
   const searchedUsersList = document.getElementById("searchedUsersList");
 
@@ -1168,57 +1169,75 @@ document.addEventListener("DOMContentLoaded", async () => {
     groupInfoModal.classList.add("active");
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
     groupInfoName.textContent = conv.title || "Group";
-    groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""
-      }`;
+    groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""}`;
 
-    const isOwner = conv.members.find(
-      (m) => m.user.id === currentUser.id
-    )?.role === "OWNER";
+    const isOwner = conv.members.find(m => m.user.id === currentUser.id)?.role === "OWNER";
 
-    if (isOwner) {
-      groupManage.style.display = "block";
-    } else {
-      groupManage.style.display = "none";
-    }
+    groupManage.style.display = isOwner ? "block" : "none";
+    editGroupTitleBtn.style.display = isOwner ? "inline-block" : "none";
 
-    groupMemberList.innerHTML = conv.members
-      .map((m) => {
-        const user = m.user;
-        if (!user) return "";
+    editGroupTitleBtn.onclick = () => {
+      groupInfoName.contentEditable = true;
+      groupInfoName.focus();
+      editGroupTitleBtn.style.display = "none";
+      saveGroupTitleBtn.style.display = "inline-block";
+    };
 
-        const userId = user.id;
-        const displayName =
-          user.displayName || user.username || `User ${userId}`;
-        const avatarLetter = displayName.charAt(0).toUpperCase();
+    saveGroupTitleBtn.onclick = async () => {
+      const newTitle = groupInfoName.textContent.trim();
+      if (!newTitle) {
+        showAlert("Title cannot be empty", "error");
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/conversations/group/${conv.id}/title`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...apiHeaders(true),
+          },
+          body: JSON.stringify({ title: newTitle }),
+        });
+        if (!res.ok) throw new Error("Failed to update group title");
+        const data = await res.json();
+        groupInfoName.textContent = data.group.title;
+        showAlert("Group title updated", "success");
+        groupInfoName.contentEditable = false;
+        editGroupTitleBtn.style.display = "inline-block";
+        saveGroupTitleBtn.style.display = "none";
+        currentConversation.title = data.group.title;
+      } catch (err) {
+        console.error(err);
+        showAlert("Failed to update title", "error");
+      }
+    };
 
-        const isMemberOwner = m.role === "OWNER";
-        const isYou = userId === currentUser.id;
+    groupMemberList.innerHTML = conv.members.map(m => {
+      const user = m.user;
+      if (!user) return "";
+      const userId = user.id;
+      const displayName = user.displayName || user.username || `User ${userId}`;
+      const avatarLetter = displayName.charAt(0).toUpperCase();
+      const isMemberOwner = m.role === "OWNER";
+      const isYou = userId === currentUser.id;
+      let html = `
+      <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""}" data-userid="${userId}">
+        <div class="group-member-avatar">${avatarLetter}</div>
+        <div class="group-member-info">
+          <div class="group-member-name">
+            ${displayName}${isMemberOwner ? '<span class="owner-badge">👑 Owner</span>' : ""}
+          </div>
+          ${isYou ? '<span class="you-label">(You)</span>' : ""}
+        </div>
+    `;
+      if (isOwner && !isYou && !isMemberOwner) {
+        html += `<button class="remove-member-btn">Remove</button>`;
+      }
+      html += `</div>`;
+      return html;
+    }).join("");
 
-        let html = `
-          <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""}" 
-              data-userid="${userId}">
-            <div class="group-member-avatar">${avatarLetter}</div>
-            <div class="group-member-info">
-              <div class="group-member-name">
-                ${displayName}
-                ${isMemberOwner ? '<span class="owner-badge">👑 Owner</span>' : ""}
-              </div>
-              ${isYou ? '<span class="you-label">(You)</span>' : ""}
-            </div>
-          `;
-
-        if (isOwner && !isYou && !isMemberOwner) {
-          html += `<button class="remove-member-btn">Remove</button>`;
-        }
-
-        html += `</div>`;
-
-        return html;
-
-      })
-      .join("");
-
-    document.querySelectorAll(".group-member").forEach((el) => {
+    document.querySelectorAll(".group-member").forEach(el => {
       el.querySelector(".remove-member-btn")?.addEventListener("click", async () => {
         const confirmResult = await Swal.fire({
           title: "Remove Member?",
@@ -1230,19 +1249,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           confirmButtonText: "Yes, remove",
           cancelButtonText: "Cancel",
         });
-
         if (confirmResult.isConfirmed) {
           const userId = el.dataset.userid;
-
           try {
-            const res = await fetch(
-              `${API_BASE}/conversations/${conv.id}/members/${userId}`,
-              {
-                method: "DELETE",
-                headers: apiHeaders(true),
-              }
-            );
-
+            const res = await fetch(`${API_BASE}/conversations/${conv.id}/members/${userId}`, {
+              method: "DELETE",
+              headers: apiHeaders(true),
+            });
             if (res.ok) {
               await Swal.fire({
                 title: "Removed!",
@@ -1253,25 +1266,17 @@ document.addEventListener("DOMContentLoaded", async () => {
               });
               await refreshConversation(conv.id);
             } else {
-              Swal.fire({
-                title: "Error",
-                text: "Failed to remove member.",
-                icon: "error",
-              });
+              Swal.fire({ title: "Error", text: "Failed to remove member.", icon: "error" });
             }
           } catch (err) {
             console.error(err);
-            Swal.fire({
-              title: "Error",
-              text: "An unexpected error occurred.",
-              icon: "error",
-            });
+            Swal.fire({ title: "Error", text: "An unexpected error occurred.", icon: "error" });
           }
         }
       });
+
       el.addEventListener("click", async (e) => {
         if (e.target.classList.contains("remove-member-btn")) return;
-
         const userId = el.dataset.userid;
         if (userId && userId !== currentUser.id) {
           await openOrCreatePrivateChat(userId);
@@ -1280,72 +1285,51 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
 
-
     addMemberSearch.value = "";
     addMemberList.innerHTML = "";
-    addMemberSearch.addEventListener(
-      "input",
-      debounce(async () => {
-        const query = addMemberSearch.value.trim();
-        if (!query) {
-          addMemberList.innerHTML = "";
-          return;
-        }
-
-        try {
-          const res = await fetch(
-            `${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`,
-            { headers: apiHeaders(true) }
-          );
-          if (!res.ok) throw new Error("Search failed");
-
-          const users = await res.json();
-          const currentIds = currentConversation.members.map(m => m.user.id);
-          const filtered = users.filter(u => !currentIds.includes(u.id));
-
-          addMemberList.innerHTML = "";
-          filtered.forEach(u => {
-            const li = document.createElement("li");
-            li.className = "add-member-item";
-            li.dataset.userid = u.id;
-
-            li.innerHTML = `
-          <div class="user-avatar">
-            ${(u.displayName || u.username).charAt(0).toUpperCase()}
-          </div>
+    addMemberSearch.addEventListener("input", debounce(async () => {
+      const query = addMemberSearch.value.trim();
+      if (!query) {
+        addMemberList.innerHTML = "";
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`, {
+          headers: apiHeaders(true),
+        });
+        if (!res.ok) throw new Error("Search failed");
+        const users = await res.json();
+        const currentIds = currentConversation.members.map(m => m.user.id);
+        const filtered = users.users.filter(u => !currentIds.includes(u.id));
+        addMemberList.innerHTML = "";
+        filtered.forEach(u => {
+          const li = document.createElement("li");
+          li.className = "add-member-item";
+          li.dataset.userid = u.id;
+          li.innerHTML = `
+          <div class="user-avatar">${(u.displayName || u.username).charAt(0).toUpperCase()}</div>
           <div class="user-info">
-            <div class="user-name">
-              ${u.displayName || u.username} <small>@${u.username}</small>
-            </div>
+            <div class="user-name">${u.displayName || u.username} <small>@${u.username}</small></div>
           </div>
-          <button class="add-member-btn" title="Add to group">
-            <i class="fas fa-plus"></i>
-          </button>
+          <button class="add-member-btn" title="Add to group"><i class="fas fa-plus"></i></button>
         `;
-
-            const btn = li.querySelector(".add-member-btn");
-            const clickHandler = async () => {
-              btn.disabled = true;
-              btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-              await addGroupMember(currentConversation.id, u.id);
-              btn.disabled = false;
-              btn.innerHTML = `<i class="fas fa-plus"></i>`;
-            };
-
-            li.addEventListener("click", clickHandler);
-            btn.addEventListener("click", e => {
-              e.stopPropagation();
-              clickHandler();
-            });
-
-            addMemberList.appendChild(li);
-          });
-        } catch (err) {
-          console.error("Add-member search error:", err);
-          showAlert("Search failed", "error");
-        }
-      }, 400)
-    );
+          const btn = li.querySelector(".add-member-btn");
+          const clickHandler = async () => {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            await addGroupMember(currentConversation.id, u.id);
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-plus"></i>`;
+          };
+          li.addEventListener("click", clickHandler);
+          btn.addEventListener("click", e => { e.stopPropagation(); clickHandler(); });
+          addMemberList.appendChild(li);
+        });
+      } catch (err) {
+        console.error("Add-member search error:", err);
+        showAlert("Search failed", "error");
+      }
+    }, 400));
 
     updateOnlineStatuses();
   }
@@ -1400,7 +1384,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   closeGroupInfo.onclick = () => {
     groupInfoModal.classList.remove("active");
+    groupInfoName.contentEditable = false;
+    editGroupTitleBtn.style.display = "none";
+    saveGroupTitleBtn.style.display = "none";
   };
+
 
   async function openOrCreatePrivateChat(otherUserId) {
     if (!otherUserId || (typeof otherUserId !== 'string' && typeof otherUserId !== 'number')) {
@@ -1504,6 +1492,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAlert(userMessage, "error");
     }
   }
+
+
+  function openGroupChat(groupId) {
+    if (!groupId || (typeof groupId !== "string" && typeof groupId !== "number")) {
+      showAlert("Invalid group ID", "error");
+      console.warn("openGroupChat: Invalid groupId", groupId);
+      return;
+    }
+
+    const groupIdNum = parseInt(groupId, 10);
+    if (isNaN(groupIdNum) || groupIdNum <= 0) {
+      showAlert("Invalid group ID", "error");
+      console.warn("openGroupChat: Invalid number", groupId);
+      return;
+    }
+
+    const groupConv = conversations.find(
+      (c) => c.isGroup && c.id === groupIdNum
+    );
+
+    if (!groupConv) {
+      showAlert("Group conversation not found", "error");
+      console.warn("Group conversation not found for ID:", groupIdNum);
+      return;
+    }
+
+    openConversation(groupConv);
+  }
+
+
   async function loadMessages(conversationId, limit = 100, cursor) {
     try {
       const url = new URL(
@@ -1527,50 +1545,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     "input",
     debounce(async () => {
       const query = searchUsersInput.value.trim();
-      if (query === "") {
+      if (!query) {
         searchedUsersList.innerHTML = "";
         return;
       }
+
       try {
         const res = await fetch(
-          `${API_BASE}/conversations/users/search?query=${encodeURIComponent(
-            query
-          )}`,
-          {
-            headers: apiHeaders(true),
-          }
+          `${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`,
+          { headers: apiHeaders(true) }
         );
-        if (!res.ok) throw new Error("User search failed");
-        const users = await res.json();
+
+        if (!res.ok) throw new Error("Search failed");
+
+        const data = await res.json();
         searchedUsersList.innerHTML = "";
-        users.forEach((user) => {
+
+        data.users.forEach((user) => {
           const li = document.createElement("li");
+          li.className = "search-item user-item";
+          li.dataset.userid = user.id;
           li.innerHTML = `
-            <div class="user-avatar">${(user.displayName || user.username)
+          <div class="user-avatar">${(user.displayName || user.username)
               .charAt(0)
               .toUpperCase()}</div>
-            <div class="user-info">
-              <div class="user-name">${user.displayName || user.username
-            } (@${user.username})</div>
-            </div>
-          `;
-          li.dataset.userid = user.id;
+          <div class="user-info">
+            <div class="user-name">${user.displayName || user.username}</div>
+            <div class="user-sub">@${user.username}</div>
+          </div>
+        `;
           li.addEventListener("click", async () => {
             await openOrCreatePrivateChat(user.id);
             searchedUsersList.innerHTML = "";
             searchUsersInput.value = "";
-            if (window.innerWidth <= 768) {
-              showChatPanel();
-            }
+            if (window.innerWidth <= 768) showChatPanel();
           });
           searchedUsersList.appendChild(li);
         });
+
+        data.groups.forEach((group) => {
+          const li = document.createElement("li");
+          li.className = "search-item group-item";
+          li.dataset.groupid = group.id;
+          li.innerHTML = `
+          <div class="user-avatar">G</div>
+          <div class="user-info">
+            <div class="user-name">${group.title}</div>
+            <div class="user-sub">Group Chat</div>
+          </div>
+        `;
+          li.addEventListener("click", async () => {
+            await openGroupChat(group.id);
+            searchedUsersList.innerHTML = "";
+            searchUsersInput.value = "";
+            if (window.innerWidth <= 768) showChatPanel();
+          });
+          searchedUsersList.appendChild(li);
+        });
+
         updateOnlineStatuses();
       } catch (err) {
-        console.error("User search failed", err);
+        console.error("Search failed", err);
       }
-    })
+    }, 400)
   );
+
 
   openGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "flex";
@@ -1579,6 +1618,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     groupMembersList.innerHTML = "";
     groupMemberSearch.value = "";
   });
+
+  drawerNewGroup?.addEventListener("click", () => {
+    openGroupModalBtn?.click();
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+  });
+
 
   closeGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "none";

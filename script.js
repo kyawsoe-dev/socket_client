@@ -101,7 +101,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutBtn = document.getElementById("logoutBtn");
   const conversationsList = document.getElementById("conversationsList");
   const openGroupModalBtn = document.getElementById("openGroupModalBtn");
-  const drawerNewGroup = document.getElementById("drawerNewGroup");
   const searchUsersInput = document.getElementById("searchUsersInput");
   const searchedUsersList = document.getElementById("searchedUsersList");
 
@@ -140,6 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const drawerName = document.getElementById("drawerName");
   const drawerUsername = document.getElementById("drawerUsername");
   const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
+  const drawerNewGroup = document.getElementById("drawerNewGroup");
 
 
   const suggestedContainer = document.getElementById("suggestedUsersContainer");
@@ -309,7 +309,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       return false;
     }
   }
-
 
   function checkPasswords() {
     if (!regPassword.value && !regConfirm.value) {
@@ -1621,10 +1620,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   drawerNewGroup?.addEventListener("click", () => {
     openGroupModalBtn?.click();
-    drawer.classList.remove("open");
-    overlay.classList.remove("open");
+    meDrawer?.classList.remove("open");
+    drawerOverlay?.classList.remove("open");
   });
-
 
   closeGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "none";

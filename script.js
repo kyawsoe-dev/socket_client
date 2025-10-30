@@ -1,5 +1,9 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+
+const API_BASE = "http://localhost:3000/api/v1";
+const SOCKET_URL = "http://localhost:3000";
+
 
 let socket = null;
 let currentUser = null;
@@ -821,17 +825,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function editMessage(id, bubbleEl) {
     const textEl = bubbleEl.querySelector(".text");
-    const original = textEl.textContent;
-    textEl.innerHTML = `<input type="text" class="edit-message-input" value="${original}" />`;
-    const input = textEl.querySelector("input");
-    input.focus();
-    input.onblur = async () => {
-      const newContent = input.value.trim();
-      console.log(newContent, "new content")
+    const original = textEl.textContent.trim();
+
+    textEl.innerHTML = `<textarea class="edit-message-input">${original}</textarea>`;
+    const textarea = textEl.querySelector(".edit-message-input");
+
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+
+    textarea.focus();
+
+    textarea.addEventListener("input", () => {
+      textarea.style.height = "auto";
+      textarea.style.height = textarea.scrollHeight + "px";
+    });
+
+    textarea.addEventListener("blur", async () => {
+      const newContent = textarea.value.trim();
       if (newContent === original) {
         textEl.textContent = original;
         return;
       }
+
       try {
         if (socket.connected) {
           socket.emit("edit message", { messageId: id, content: newContent }, (ack) => {
@@ -848,7 +863,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             headers: apiHeaders(true),
             body: JSON.stringify({ content: newContent }),
           });
-          console.log(res, "edit response");
+
           if (res.ok) {
             textEl.textContent = newContent;
           } else {
@@ -857,18 +872,23 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         }
       } catch (e) {
-        console.log(e, "edit, error")
+        console.error("Edit error:", e);
         textEl.textContent = original;
         showAlert("Edit failed", "error");
       }
-    };
-    input.onkeydown = (e) => {
-      if (e.key === "Enter") input.blur();
+    });
+
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault(); 
+        textarea.blur();
+      }
       if (e.key === "Escape") {
         textEl.textContent = original;
       }
-    };
+    });
   }
+
 
   function deleteMessage(id, msgEl) {
     Swal.fire({
@@ -1128,35 +1148,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.innerWidth > 768) {
       document.querySelector(".chat-panel").style.display = "flex";
     }
-
-    addMessageScrollListener();
-
   }
-
-  // Infinite scroll for messages
-  function addMessageScrollListener() {
-    chatbox.removeEventListener('scroll', handleMessageScroll);
-    chatbox.addEventListener('scroll', handleMessageScroll);
-  }
-
-
-  let loadingMoreMessages = false;
-  async function handleMessageScroll() {
-    if (loadingMoreMessages) return;
-
-    const scrollTop = chatbox.scrollTop;
-    if (scrollTop < 100 && currentConversation) {
-      const cursor = messagesCursorMap[currentConversation.id];
-      if (cursor) {
-        loadingMoreMessages = true;
-        const currentScrollHeight = chatbox.scrollHeight;
-        await loadMessages(currentConversation.id, 50, cursor);
-        chatbox.scrollTop = chatbox.scrollHeight - currentScrollHeight;
-        loadingMoreMessages = false;
-      }
-    }
-  }
-
 
   async function refreshConversation(id) {
     try {
@@ -1260,7 +1252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 title: "Removed!",
                 text: "The member has been removed successfully.",
                 icon: "success",
-                timer: 1500,
+                timer: 500,
                 showConfirmButton: false,
               });
               await refreshConversation(conv.id);
@@ -1497,7 +1489,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         icon: "success",
         title: "Chat created!",
         text: "Start messaging now",
-        timer: 1000,
+        timer: 500,
         showConfirmButton: false
       });
 

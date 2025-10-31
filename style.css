@@ -543,7 +543,7 @@ body {
 }
 
 .search-input {
-  width: min(95%, 400px);
+  width: min(95%, 500px);
   padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 20px);
   border: 1.5px solid rgba(0, 0, 0, 0.1);
   border-radius: 9999px;

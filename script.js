@@ -192,8 +192,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         view.style.paddingBottom = offset > 0 ? `${offset + 20}px` : '1rem';
       }
     });
-
-
   }
 
   document.getElementById("openSidebarBtn")?.addEventListener("click", () => {
@@ -479,6 +477,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (chatbox) chatbox.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
     history.back();
+    document.querySelector('.chat-panel').classList.remove('active');
   });
 
   // Handle browser back button
@@ -591,7 +590,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
       if (other && other.user.id === userId) {
         try {
-          const res = await fetch(`${API_BASE}/users/${userId}`, {
+          const res = await fetch(`${API_BASE}/conversations/users/${userId}`, {
             headers: apiHeaders(true),
           });
           if (res.ok) {
@@ -673,6 +672,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!conversations || conversations.length === 0) {
       showConversationList();
+      document.querySelector('.chat-panel').style.display = "none";
     } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
@@ -1156,12 +1156,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-
-    updateConvStatus();
+    const chatPanel = document.querySelector(".chat-panel");
+    chatPanel.classList.add("active");
 
     if (window.innerWidth > 768) {
-      document.querySelector(".chat-panel").style.display = "flex";
+      chatPanel.style.display = "flex";
     }
+
+    updateConvStatus();
   }
 
   async function refreshConversation(id) {
@@ -1184,6 +1186,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openGroupInfo(conv) {
     groupInfoModal.classList.add("active");
+    document.querySelector('.chat-panel').classList.add('group-modal-open');
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
     groupInfoName.textContent = conv.title || "Group";
     groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""}`;
@@ -1401,6 +1404,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   closeGroupInfo.onclick = () => {
     groupInfoModal.classList.remove("active");
+    document.querySelector('.chat-panel').classList.remove('group-modal-open');
     groupInfoName.contentEditable = false;
     editGroupTitleBtn.style.display = "none";
     saveGroupTitleBtn.style.display = "none";

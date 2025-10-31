@@ -1327,17 +1327,44 @@ document.addEventListener("DOMContentLoaded", async () => {
           li.className = "add-member-item";
           li.dataset.userid = u.id;
           li.innerHTML = `
-          <div class="user-avatar">${(u.displayName || u.username).charAt(0).toUpperCase()}</div>
-          <div class="user-info">
-            <div class="user-name">${u.displayName || u.username} <small>@${u.username}</small></div>
-          </div>
-          <button class="add-member-btn" title="Add to group"><i class="fas fa-plus"></i></button>
-        `;
+            <div class="user-avatar">${(u.displayName || u.username).charAt(0).toUpperCase()}</div>
+            <div class="user-info">
+              <div class="user-name">${u.displayName || u.username} <small>@${u.username}</small></div>
+            </div>
+            <button class="add-member-btn" title="Add to group"><i class="fas fa-plus"></i></button>
+          `;
           const btn = li.querySelector(".add-member-btn");
           const clickHandler = async () => {
             btn.disabled = true;
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             await addGroupMember(currentConversation.id, u.id);
+            await refreshConversation(currentConversation.id);
+            groupMemberList.innerHTML = currentConversation.members.map(m => {
+              const user = m.user;
+              if (!user) return "";
+              const userId = user.id;
+              const displayName = user.displayName || user.username || `User ${userId}`;
+              const avatarLetter = displayName.charAt(0).toUpperCase();
+              const isMemberOwner = m.role === "OWNER";
+              const isYou = userId === currentUser.id;
+              let html = `
+            <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""}" data-userid="${userId}">
+              <div class="group-member-avatar">${avatarLetter}</div>
+              <div class="group-member-info">
+                <div class="group-member-name">
+                  ${displayName}${isMemberOwner ? '<span class="owner-badge">👑 Owner</span>' : ""}
+                </div>
+                ${isYou ? '<span class="you-label">(You)</span>' : ""}
+              </div>
+          `;
+              if (currentConversation.members.find(m => m.user.id === currentUser.id)?.role === "OWNER" && !isYou && !isMemberOwner) {
+                html += `<button class="remove-member-btn">Remove</button>`;
+              }
+              html += `</div>`;
+              return html;
+            }).join("");
+            groupInfoCount.textContent = `${currentConversation.members.length} member${currentConversation.members.length !== 1 ? "s" : ""}`;
+
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-plus"></i>`;
           };
@@ -1350,6 +1377,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         showAlert("Search failed", "error");
       }
     }, 400));
+
 
     updateOnlineStatuses();
   }

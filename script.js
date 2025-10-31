@@ -1673,7 +1673,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!res.ok) throw new Error("Group member search failed");
         const users = await res.json();
         groupMembersList.innerHTML = "";
-        users.forEach((user) => {
+        users.users.forEach((user) => {
           if (selectedGroupMembers.some((m) => m.id === user.id)) return;
           const li = document.createElement("li");
           li.innerHTML = `

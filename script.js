@@ -177,7 +177,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 150);
     });
 
-
     window.addEventListener("resize", () => {
       const chatInput = document.querySelector(".chat-input");
       if (window.visualViewport) {
@@ -185,6 +184,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         chatInput.style.bottom = offset > 0 ? `${offset}px` : "0";
       }
     });
+
+    window.addEventListener('resize', () => {
+      const view = document.querySelector('.auth-view');
+      if (window.visualViewport) {
+        const offset = window.innerHeight - window.visualViewport.height;
+        view.style.paddingBottom = offset > 0 ? `${offset + 20}px` : '1rem';
+      }
+    });
+
 
   }
 

@@ -156,6 +156,14 @@
                   <span id="convCount" class="conv-count">0 members</span>
                 </div>
               </div>
+              <div class="chat-actions">
+                <button id="audioCallBtn" class="icon-btn" title="Audio Call">
+                  <i class="fas fa-phone"></i>
+                </button>
+                <button id="videoCallBtn" class="icon-btn" title="Video Call">
+                  <i class="fas fa-video"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -209,6 +217,26 @@
         <div class="suggested-content">
           <ul id="suggestedUsersList" class="suggested-list"></ul>
         </div>
+      </div>
+    </div>
+
+    <div id="callContainer" class="call-container" style="display: none">
+      <div id="localVideoContainer" class="video-container local">
+        <video id="localVideo" autoplay playsinline muted></video>
+      </div>
+      <div id="remoteVideos" class="remote-videos"></div>
+      <div class="call-controls">
+        <button id="toggleAudioBtn"><i class="fas fa-microphone"></i></button>
+        <button id="toggleVideoBtn"><i class="fas fa-video"></i></button>
+        <button id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
+      </div>
+    </div>
+    <div id="incomingCallModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h3>Incoming Call</h3>
+        <p id="callerName"></p>
+        <button id="acceptCallBtn">Accept</button>
+        <button id="rejectCallBtn">Reject</button>
       </div>
     </div>
 

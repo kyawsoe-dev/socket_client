@@ -176,6 +176,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           : '<i class="fas fa-user-plus"></i>';
       }, 150);
     });
+
+
+    window.addEventListener("resize", () => {
+      const chatInput = document.querySelector(".chat-input");
+      if (window.visualViewport) {
+        const offset = window.innerHeight - window.visualViewport.height;
+        chatInput.style.bottom = offset > 0 ? `${offset}px` : "0";
+      }
+    });
+
   }
 
   document.getElementById("openSidebarBtn")?.addEventListener("click", () => {

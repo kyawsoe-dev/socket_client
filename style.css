@@ -2084,6 +2084,10 @@ video {
     font-size: 13px;
   }
 
+  .chat-panel.group-modal-open .chat-input {
+    right: 0;
+  }
+
   .emoji-btn,
   .send-btn {
     width: 38px;
@@ -2238,16 +2242,6 @@ video {
   }
 
   .group-info-modal.active {
-    right: 0;
-  }
-
-  .chat-panel.group-modal-open .chat-input {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .chat-panel.group-modal-open .chat-input {
     right: 0;
   }
 }

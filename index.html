@@ -30,11 +30,11 @@
 
       <form id="loginForm" class="auth-form">
         <label for="loginIdentifier">Username or Email <span class="required">*</span></label>
-        <input id="loginIdentifier" type="text" placeholder="Username or Email" required />
+        <input id="loginIdentifier" type="text" placeholder="Username or Email" required autocomplete="username" />
 
         <label for="loginPassword">Password <span class="required">*</span></label>
         <div class="password-field">
-          <input id="loginPassword" type="password" placeholder="Password" required />
+          <input id="loginPassword" type="password" placeholder="Password" required autocomplete="current-password" />
           <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('loginPassword', this)"></i>
         </div>
 
@@ -43,25 +43,26 @@
 
       <form id="registerForm" class="auth-form hidden">
         <label for="regDisplayName">Full Name <span class="required">*</span></label>
-        <input id="regDisplayName" type="text" placeholder="Full Name" required />
+        <input id="regDisplayName" type="text" placeholder="Full Name" required autocomplete="name" />
 
         <label for="regUsername">Username <span class="required">*</span></label>
-        <input id="regUsername" type="text" placeholder="Username" required />
+        <input id="regUsername" type="text" placeholder="Username" required autocomplete="username" />
         <small id="usernameMsg" class="availability-msg"></small>
 
         <label for="regEmail">Email <span class="required">*</span></label>
-        <input id="regEmail" type="email" placeholder="Email" required />
+        <input id="regEmail" type="email" placeholder="Email" required autocomplete="email" />
         <small id="emailMsg" class="availability-msg"></small>
 
         <label for="regPassword">Password <span class="required">*</span></label>
         <div class="password-field">
-          <input id="regPassword" type="password" placeholder="Password" required />
+          <input id="regPassword" type="password" placeholder="Password" required autocomplete="new-password" />
           <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regPassword', this)"></i>
         </div>
 
         <label for="regConfirmPassword">Confirm Password <span class="required">*</span></label>
         <div class="password-field">
-          <input id="regConfirmPassword" type="password" placeholder="Confirm Password" required />
+          <input id="regConfirmPassword" type="password" placeholder="Confirm Password" required
+            autocomplete="new-password" />
           <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regConfirmPassword', this)"></i>
         </div>
 
@@ -156,6 +157,7 @@
                   <span id="convCount" class="conv-count">0 members</span>
                 </div>
               </div>
+
               <div class="chat-actions">
                 <button id="audioCallBtn" class="icon-btn" title="Audio Call">
                   <i class="fas fa-phone"></i>
@@ -214,6 +216,7 @@
         <div class="suggested-header">
           <h4><i class="fas fa-user-plus"></i> Suggested Users</h4>
         </div>
+        <!-- Suggested content -->
         <div class="suggested-content">
           <ul id="suggestedUsersList" class="suggested-list"></ul>
         </div>
@@ -231,12 +234,19 @@
         <button id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
       </div>
     </div>
+
     <div id="incomingCallModal" class="modal" style="display: none">
       <div class="modal-content">
         <h3>Incoming Call</h3>
-        <p id="callerName"></p>
-        <button id="acceptCallBtn">Accept</button>
-        <button id="rejectCallBtn">Reject</button>
+        <p id="callerName">User Name</p>
+        <div class="call-modal-actions">
+          <button id="acceptCallBtn" title="Accept">
+            <i class="fas fa-phone"></i>
+          </button>
+          <button id="rejectCallBtn" title="Reject">
+            <i class="fas fa-phone-slash"></i>
+          </button>
+        </div>
       </div>
     </div>
 

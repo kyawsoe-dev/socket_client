@@ -1,7 +1,11 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
-let socket = null;
+
+const API_BASE = "http://192.168.50.65:3000/api/v1";
+const SOCKET_URL = "http://192.168.50.65:3000";
+
+var socket = null;
 let currentUser = null;
 let token = null;
 let conversations = [];
@@ -17,6 +21,8 @@ let lastActiveMap = new Map();
 const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
 const typingSound = new Audio("/assets/audio/typing.mp3");
+const callSound = new Audio("/assets/audio/call.mp3");
+const endSound = new Audio("/assets/audio/end.mp3");
 
 function apiHeaders(withAuth = true) {
   const headers = { "Content-Type": "application/json" };
@@ -175,22 +181,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? '<i class="fas fa-user-minus"></i>'
           : '<i class="fas fa-user-plus"></i>';
       }, 150);
-    });
-
-    window.addEventListener("resize", () => {
-      const chatInput = document.querySelector(".chat-input");
-      if (window.visualViewport) {
-        const offset = window.innerHeight - window.visualViewport.height;
-        chatInput.style.bottom = offset > 0 ? `${offset}px` : "0";
-      }
-    });
-
-    window.addEventListener('resize', () => {
-      const view = document.querySelector('.auth-view');
-      if (window.visualViewport) {
-        const offset = window.innerHeight - window.visualViewport.height;
-        view.style.paddingBottom = offset > 0 ? `${offset + 20}px` : '1rem';
-      }
     });
   }
 
@@ -477,7 +467,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (chatbox) chatbox.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
     history.back();
-    document.querySelector('.chat-panel').classList.remove('active');
   });
 
   // Handle browser back button
@@ -583,6 +572,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       await handleUserOffline(userId);
       updateConvStatus();
     });
+
+
+    socket.on('webrtc:offer', (data) => {
+      incomingCallModal.style.display = 'flex';
+      callerName.textContent = `From ${data.fromUsername || 'Unknown User'}`;
+      window.incomingCallData = data;
+    });
+
+    socket.on('webrtc:group-offer', (data) => {
+      incomingCallModal.style.display = 'flex';
+      const groupTitle = data.groupTitle || 'Group Call';
+      callerName.textContent = `From ${data.fromUsername || 'Unknown User'} in ${groupTitle}`;
+      window.incomingCallData = data;
+      window.incomingCallData.isGroup = true;
+    });
+
+    socket.on('webrtc:answer', handleAnswer);
+    socket.on('webrtc:candidate', handleCandidate);
+    socket.on('webrtc:group-answer', handleAnswer);
+    socket.on('webrtc:group-candidate', handleCandidate);
+    socket.on('webrtc:end', (data) => {
+      endCall();
+      showAlert('Call ended', 'info');
+    });
+
+    socket.on('webrtc:group-end', (data) => {
+      endCall();
+      showAlert('Group call ended by a participant', 'info');
+    });
+
+    socket.on('callRejectedNotification', ({ from }) => {
+      console.log(`Your call was rejected by user ${from}`);
+      showAlert("Call rejected");
+      endCall();
+    });
+
   }
 
   async function handleUserOffline(userId) {
@@ -590,7 +615,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
       if (other && other.user.id === userId) {
         try {
-          const res = await fetch(`${API_BASE}/conversations/users/${userId}`, {
+          const res = await fetch(`${API_BASE}/users/${userId}`, {
             headers: apiHeaders(true),
           });
           if (res.ok) {
@@ -615,12 +640,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!currentConversation || !convCount) return;
 
     if (currentConversation.isGroup) {
-      const total = currentConversation.members.length;
-      const onlineCount = currentConversation.members.filter(m => onlineUsers.has(m.user.id)).length;
+      const validMembers = currentConversation.members.filter(m => m && m.user);
+      const total = validMembers.length;
+      const onlineCount = validMembers.filter(m => onlineUsers.has(m.user.id)).length;
+
       convCount.textContent = `${total} member${total > 1 ? 's' : ''}, ${onlineCount} online`;
     } else {
-      const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
-      if (other) {
+      const validMembers = currentConversation.members.filter(m => m && m.user);
+      const other = validMembers.find(m => m.user.id !== currentUser.id);
+
+      if (other && other.user) {
         const id = other.user.id;
         if (onlineUsers.has(id)) {
           convCount.textContent = "Online";
@@ -633,6 +662,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
+
 
   function appendSystemMessage(text) {
     const el = document.createElement("div");
@@ -672,7 +702,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!conversations || conversations.length === 0) {
       showConversationList();
-      document.querySelector('.chat-panel').style.display = "none";
     } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
@@ -694,7 +723,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         location.reload();
       });
     } else {
-      console.warn("Drawer elements not found, skipping drawer initialization");
+      console.log("Drawer elements not found, skipping drawer initialization");
+    }
+
+    if ('Notification' in window && navigator.serviceWorker) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          subscribeToPush();
+        } else if (permission === 'denied') {
+          console.log('Push notifications denied');
+        } else {
+          console.log('Push permission default');
+        }
+      }).catch(err => console.error('Permission request error:', err));
+    }
+
+    async function subscribeToPush() {
+      try {
+        const publicKey = await fetch(`${API_BASE}/auth/vapid-public-key`).then(r => {
+          if (!r.ok) throw new Error('Failed to fetch VAPID key');
+          return r.text();
+        });
+
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        await navigator.serviceWorker.ready;
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        socket.emit('subscribe push', subscription);
+      } catch (err) {
+        console.error('Push subscription failed:', err);
+      }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
     }
   }
 
@@ -1143,7 +1216,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const other = conv.members.find((m) => m.user.id !== currentUser.id);
       if (other && !lastActiveMap.has(other.user.id)) {
         try {
-          const res = await fetch(`${API_BASE}/conversations/user/${other.user.id}`, {
+          const res = await fetch(`${API_BASE}/conversations/users/${other.user.id}`, {
             headers: apiHeaders(true),
           });
           if (res.ok) {
@@ -1156,14 +1229,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    const chatPanel = document.querySelector(".chat-panel");
-    chatPanel.classList.add("active");
-
-    if (window.innerWidth > 768) {
-      chatPanel.style.display = "flex";
-    }
 
     updateConvStatus();
+
+    if (window.innerWidth > 768) {
+      document.querySelector(".chat-panel").style.display = "flex";
+    }
   }
 
   async function refreshConversation(id) {
@@ -1186,12 +1257,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openGroupInfo(conv) {
     groupInfoModal.classList.add("active");
-    document.querySelector('.chat-panel').classList.add('group-modal-open');
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
     groupInfoName.textContent = conv.title || "Group";
     groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""}`;
-
-    const isOwner = conv.members.find(m => m.user.id === currentUser.id)?.role === "OWNER";
+    const isOwner = conv.members.find(m => m && m.user && m.user.id === currentUser.id)?.role === "OWNER";
 
     groupManage.style.display = isOwner ? "block" : "none";
     editGroupTitleBtn.style.display = isOwner ? "inline-block" : "none";
@@ -1325,46 +1394,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         filtered.forEach(u => {
           const li = document.createElement("li");
           li.className = "add-member-item";
-          li.dataset.userid = u.id;
           li.innerHTML = `
-            <div class="user-avatar">${(u.displayName || u.username).charAt(0).toUpperCase()}</div>
-            <div class="user-info">
-              <div class="user-name">${u.displayName || u.username} <small>@${u.username}</small></div>
-            </div>
-            <button class="add-member-btn" title="Add to group"><i class="fas fa-plus"></i></button>
-          `;
+          <div class="user-avatar">${(u.displayName || u.username).charAt(0).toUpperCase()}</div>
+          <div class="user-info">
+            <div class="user-name">${u.displayName || u.username} <small>@${u.username}</small></div>
+          </div>
+          <button class="add-member-btn" title="Add to group"><i class="fas fa-plus"></i></button>
+        `;
           const btn = li.querySelector(".add-member-btn");
           const clickHandler = async () => {
             btn.disabled = true;
             btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
             await addGroupMember(currentConversation.id, u.id);
-            await refreshConversation(currentConversation.id);
-            groupMemberList.innerHTML = currentConversation.members.map(m => {
-              const user = m.user;
-              if (!user) return "";
-              const userId = user.id;
-              const displayName = user.displayName || user.username || `User ${userId}`;
-              const avatarLetter = displayName.charAt(0).toUpperCase();
-              const isMemberOwner = m.role === "OWNER";
-              const isYou = userId === currentUser.id;
-              let html = `
-            <div class="group-member ${isMemberOwner ? "owner" : ""} ${isYou ? "you" : ""}" data-userid="${userId}">
-              <div class="group-member-avatar">${avatarLetter}</div>
-              <div class="group-member-info">
-                <div class="group-member-name">
-                  ${displayName}${isMemberOwner ? '<span class="owner-badge">👑 Owner</span>' : ""}
-                </div>
-                ${isYou ? '<span class="you-label">(You)</span>' : ""}
-              </div>
-          `;
-              if (currentConversation.members.find(m => m.user.id === currentUser.id)?.role === "OWNER" && !isYou && !isMemberOwner) {
-                html += `<button class="remove-member-btn">Remove</button>`;
-              }
-              html += `</div>`;
-              return html;
-            }).join("");
-            groupInfoCount.textContent = `${currentConversation.members.length} member${currentConversation.members.length !== 1 ? "s" : ""}`;
-
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-plus"></i>`;
           };
@@ -1377,7 +1418,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         showAlert("Search failed", "error");
       }
     }, 400));
-
 
     updateOnlineStatuses();
   }
@@ -1432,7 +1472,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   closeGroupInfo.onclick = () => {
     groupInfoModal.classList.remove("active");
-    document.querySelector('.chat-panel').classList.remove('group-modal-open');
     groupInfoName.contentEditable = false;
     editGroupTitleBtn.style.display = "none";
     saveGroupTitleBtn.style.display = "none";
@@ -1442,14 +1481,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function openOrCreatePrivateChat(otherUserId) {
     if (!otherUserId || (typeof otherUserId !== 'string' && typeof otherUserId !== 'number')) {
       showAlert("Invalid user ID", "error");
-      console.warn("openOrCreatePrivateChat: Invalid otherUserId", otherUserId);
+      console.log("openOrCreatePrivateChat: Invalid otherUserId", otherUserId);
       return;
     }
 
     const userIdNum = parseInt(otherUserId, 10);
     if (isNaN(userIdNum) || userIdNum <= 0) {
       showAlert("Invalid user ID", "error");
-      console.warn("openOrCreatePrivateChat: Invalid number", otherUserId);
+      console.log("openOrCreatePrivateChat: Invalid number", otherUserId);
       return;
     }
 
@@ -1544,16 +1583,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   function openGroupChat(groupId) {
+    console.log(groupId, "g ID")
     if (!groupId || (typeof groupId !== "string" && typeof groupId !== "number")) {
       showAlert("Invalid group ID", "error");
-      console.warn("openGroupChat: Invalid groupId", groupId);
+      console.log("openGroupChat: Invalid groupId", groupId);
       return;
     }
 
     const groupIdNum = parseInt(groupId, 10);
     if (isNaN(groupIdNum) || groupIdNum <= 0) {
       showAlert("Invalid group ID", "error");
-      console.warn("openGroupChat: Invalid number", groupId);
+      console.log("openGroupChat: Invalid number", groupId);
       return;
     }
 
@@ -1563,7 +1603,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!groupConv) {
       showAlert("Group conversation not found", "error");
-      console.warn("Group conversation not found for ID:", groupIdNum);
+      console.log("Group conversation not found for ID:", groupIdNum);
       return;
     }
 
@@ -1859,6 +1899,242 @@ document.addEventListener("DOMContentLoaded", async () => {
       originalHeight = window.innerHeight;
     }
   });
+
+  let localStream;
+  let peerConnections = new Map();
+  let isAudioEnabled = true;
+  let isVideoEnabled = true;
+  let currentCallType = null; // 'audio' or 'video'
+  let currentCallConvId = null;
+
+  const audioCallBtn = document.getElementById('audioCallBtn');
+  const videoCallBtn = document.getElementById('videoCallBtn');
+  const callContainer = document.getElementById('callContainer');
+  const localVideo = document.getElementById('localVideo');
+  const remoteVideos = document.getElementById('remoteVideos');
+  const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+  const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+  const endCallBtn = document.getElementById('endCallBtn');
+  const incomingCallModal = document.getElementById('incomingCallModal');
+  const callerName = document.getElementById('callerName');
+  const acceptCallBtn = document.getElementById('acceptCallBtn');
+  const rejectCallBtn = document.getElementById('rejectCallBtn');
+
+  audioCallBtn.addEventListener('click', () => startCall('audio'));
+  videoCallBtn.addEventListener('click', () => startCall('video'));
+
+  toggleAudioBtn.addEventListener('click', toggleAudio);
+  toggleVideoBtn.addEventListener('click', toggleVideo);
+  endCallBtn.addEventListener('click', endCall);
+
+  acceptCallBtn.addEventListener('click', acceptCall);
+  rejectCallBtn.addEventListener('click', rejectCall);
+
+  async function startCall(type) {
+    if (!currentConversation) return showAlert("Select a conversation first", "warning");
+    currentCallType = type;
+    currentCallConvId = currentConversation.id;
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: currentCallType === 'video'
+      });
+      localVideo.srcObject = localStream;
+      callContainer.style.display = 'flex';
+      callSound.play().catch(err => console.error('Call sound error:', err));
+      if (currentConversation.isGroup) {
+        const members = currentConversation.members.filter(m => m.user.id !== currentUser.id);
+        members.forEach(member => {
+          createOffer(member.user.id, true);
+        });
+        socket.emit('webrtc:group-offer', { conversationId: currentConversation.id, offer: null, groupTitle: currentConversation.title, type: currentCallType });
+      } else {
+        const otherUserId = currentConversation.members.find(m => m.user.id !== currentUser.id).user.id;
+        createOffer(otherUserId, false, type);
+      }
+    } catch (err) {
+      console.error('getUserMedia error:', err);
+      if (err.name === 'NotAllowedError') {
+        showAlert('Permission denied for camera/microphone. Please enable in browser settings.', 'error');
+      } else {
+        showAlert('Failed to access camera/microphone. Check permissions.', 'error');
+      }
+    }
+  }
+
+  async function createOffer(toUserId, isGroup = false) {
+    const pc = await createPeerConnection(toUserId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    if (isGroup) {
+      socket.emit('webrtc:group-offer', { conversationId: currentCallConvId, toUserId, offer, type: currentCallType });
+    } else {
+      socket.emit('webrtc:offer', { toUserId, offer, type: currentCallType });
+    }
+  }
+
+  async function createPeerConnection(userId) {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+      ]
+    });
+    peerConnections.set(userId, pc);
+
+    pc.addEventListener('icecandidate', event => {
+      if (event.candidate) {
+        if (currentConversation && currentConversation.isGroup) {
+          socket.emit('webrtc:group-candidate', { conversationId: currentCallConvId, toUserId: userId, candidate: event.candidate });
+        } else {
+          socket.emit('webrtc:candidate', { toUserId: userId, candidate: event.candidate });
+        }
+      }
+    });
+
+    pc.addEventListener('track', event => {
+      let remoteVideo = document.querySelector(`#remote-${userId}`);
+      if (!remoteVideo) {
+        remoteVideo = document.createElement('video');
+        remoteVideo.id = `remote-${userId}`;
+        remoteVideo.autoplay = true;
+        remoteVideo.playsinline = true;
+        remoteVideos.appendChild(remoteVideo);
+      }
+      if (event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+      }
+    });
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.addEventListener('connectionstatechange', () => {
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        endCallForPeer(userId);
+      }
+    });
+
+    return pc;
+  }
+
+  async function handleOffer({ fromUserId, offer, conversationId, isGroup, type }) {
+    currentCallType = type;
+    const pc = await createPeerConnection(fromUserId);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    if (isGroup || conversationId) {
+      socket.emit('webrtc:group-answer', { conversationId: conversationId || currentCallConvId, toUserId: fromUserId, answer });
+    } else {
+      socket.emit('webrtc:answer', { toUserId: fromUserId, answer });
+    }
+  }
+
+  async function handleAnswer({ fromUserId, answer }) {
+    const pc = peerConnections.get(fromUserId);
+    if (pc) {
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (err) {
+        console.error('setRemoteDescription error:', err);
+      }
+    }
+  }
+
+  async function handleCandidate({ fromUserId, candidate }) {
+    const pc = peerConnections.get(fromUserId);
+    if (pc) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.error('addIceCandidate error:', err);
+      }
+    }
+  }
+
+  async function acceptCall() {
+    incomingCallModal.style.display = 'none';
+    const data = window.incomingCallData;
+
+    if (data.isGroup) {
+      await openGroupChat(data.conversationId);
+    } else {
+      await openOrCreatePrivateChat(data.fromUserId);
+    }
+
+    if (!localStream) {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: currentCallType === 'video'
+        });
+        localVideo.srcObject = localStream;
+        callContainer.style.display = 'flex';
+      } catch (err) {
+        console.error('getUserMedia error:', err);
+        showAlert('Failed to access camera/microphone.', 'error');
+        return;
+      }
+    }
+
+    if (data.isGroup) {
+      handleOffer({ fromUserId: data.fromUserId, offer: data.offer, conversationId: data.conversationId, isGroup: true, type: data.type });
+    } else {
+      handleOffer({ fromUserId: data.fromUserId, offer: data.offer, type: data.type });
+    }
+  }
+
+  function rejectCall() {
+    incomingCallModal.style.display = 'none';
+    const data = window.incomingCallData;
+    socket.emit('callRejected', { toUserId: data.fromUserId, from: currentUser.id });
+  }
+
+  function toggleAudio() {
+    isAudioEnabled = !isAudioEnabled;
+    localStream.getAudioTracks()[0].enabled = isAudioEnabled;
+    toggleAudioBtn.classList.toggle('off', !isAudioEnabled);
+  }
+
+  function toggleVideo() {
+    if (currentCallType !== 'video') return;
+    isVideoEnabled = !isVideoEnabled;
+    localStream.getVideoTracks()[0].enabled = isVideoEnabled;
+    toggleVideoBtn.classList.toggle('off', !isVideoEnabled);
+  }
+
+  function endCall() {
+    peerConnections.forEach((pc, userId) => {
+      pc.close();
+      if (currentConversation.isGroup) {
+        socket.emit('webrtc:group-end', { conversationId: currentCallConvId });
+      } else {
+        socket.emit('webrtc:end', { toUserId: userId });
+      }
+    });
+    peerConnections.clear();
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    localVideo.srcObject = null;
+    remoteVideos.innerHTML = '';
+    callContainer.style.display = 'none';
+    currentCallType = null;
+    currentCallConvId = null;
+    endSound.play().catch(err => console.error('End sound error:', err));
+  }
+
+  function endCallForPeer(userId) {
+    const pc = peerConnections.get(userId);
+    if (pc) {
+      pc.close();
+      peerConnections.delete(userId);
+      const remoteVideo = document.querySelector(`#remote-${userId}`);
+      if (remoteVideo) remoteVideo.remove();
+    }
+    if (peerConnections.size === 0) {
+      endCall();
+    }
+  }
 });
 
 if ("serviceWorker" in navigator) {

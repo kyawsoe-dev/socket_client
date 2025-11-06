@@ -4,6 +4,7 @@ const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 var socket = null;
 let currentUser = null;
 let token = null;
+let cachedIceServers = null;
 let conversations = [];
 let currentConversation = null;
 let messagesCursorMap = {};
@@ -695,6 +696,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     connectSocket();
     await loadConversations();
     await loadSuggestedUsers();
+    await getIceServers();
 
     if (!conversations || conversations.length === 0) {
       showConversationList();
@@ -1969,20 +1971,54 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+
+
+  async function getIceServers() {
+    if (cachedIceServers) return cachedIceServers;
+
+    try {
+      const res = await fetch(`${API_BASE}/conversations/get/turn-credentials`, {
+        headers: apiHeaders(true),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+
+      cachedIceServers = data.data?.iceServers ?? data.iceServers ?? [];
+
+      if (data.data?.expirySeconds) {
+        const refreshMs = (data.data.expirySeconds - 300) * 1000;
+        setTimeout(() => { cachedIceServers = null; }, refreshMs);
+      }
+
+      return cachedIceServers;
+    } catch (err) {
+      console.log('TURN fetch failed - using minimal STUN fallback', err);
+      cachedIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+      return cachedIceServers;
+    }
+  }
+
   async function createPeerConnection(userId) {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-      ]
-    });
+    const iceServers = await getIceServers();
+    const pc = new RTCPeerConnection({ iceServers });
+
     peerConnections.set(userId, pc);
 
     pc.addEventListener('icecandidate', event => {
       if (event.candidate) {
         if (currentConversation && currentConversation.isGroup) {
-          socket.emit('webrtc:group-candidate', { conversationId: currentCallConvId, toUserId: userId, candidate: event.candidate });
+          socket.emit('webrtc:group-candidate', {
+            conversationId: currentCallConvId,
+            toUserId: userId,
+            candidate: event.candidate
+          });
         } else {
-          socket.emit('webrtc:candidate', { toUserId: userId, candidate: event.candidate });
+          socket.emit('webrtc:candidate', {
+            toUserId: userId,
+            candidate: event.candidate
+          });
         }
       }
     });

@@ -1708,7 +1708,6 @@ body {
 }
 
 .chat-input {
-  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
@@ -2079,6 +2078,7 @@ body {
   }
 
   .chat-input {
+    position: fixed;
     padding: 8px;
     gap: 5px;
   }

@@ -1,9 +1,5 @@
-// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
-
-
-const API_BASE = "http://192.168.50.65:3000/api/v1";
-const SOCKET_URL = "http://192.168.50.65:3000";
+const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
 var socket = null;
 let currentUser = null;

@@ -439,6 +439,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       chatPanel.style.display = "flex";
       chatbox.innerHTML = "";
     }
+
+    document.querySelector('.chat-input').classList.add('hidden');
   }
 
   function showChatPanel() {
@@ -699,7 +701,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     await getIceServers();
 
     if (!conversations || conversations.length === 0) {
+      document.querySelector('.chat-input')?.classList.add('hidden');
       showConversationList();
+    } else if (!currentConversation) {
+      document.querySelector('.chat-input')?.classList.add('hidden');
     } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
@@ -1233,6 +1238,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.innerWidth > 768) {
       document.querySelector(".chat-panel").style.display = "flex";
     }
+
+    document.querySelector('.chat-input').classList.remove('hidden');
   }
 
   async function refreshConversation(id) {

@@ -1282,6 +1282,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+
+  function updateGroupTitleEverywhere(newTitle) {
+    if (convTitle) convTitle.textContent = newTitle;
+    if (groupInfoName) groupInfoName.textContent = newTitle;
+    if (currentConversation) currentConversation.title = newTitle;
+  }
+
   function openGroupInfo(conv) {
     groupInfoModal.classList.add("active");
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
@@ -1316,12 +1323,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         if (!res.ok) throw new Error("Failed to update group title");
         const data = await res.json();
-        groupInfoName.textContent = data.group.title;
+        updateGroupTitleEverywhere(data.group.title);
         showAlert("Group title updated", "success");
         groupInfoName.contentEditable = false;
         editGroupTitleBtn.style.display = "inline-block";
         saveGroupTitleBtn.style.display = "none";
-        currentConversation.title = data.group.title;
+        renderConversations();
       } catch (err) {
         console.error(err);
         showAlert("Failed to update title", "error");
@@ -2020,9 +2027,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const data = await res.json();
 
-      cachedIceServers = data.data?.iceServers ?? data.iceServers ?? [];
+      let iceServersRaw = data?.data?.iceServers ?? data?.iceServers ?? [];
 
-      if (data.data?.expirySeconds) {
+      if (!Array.isArray(iceServersRaw)) {
+        iceServersRaw = [iceServersRaw];
+      }
+
+      if (!iceServersRaw.length) {
+        console.log('No ICE servers returned, using minimal STUN fallback');
+        iceServersRaw = [{ urls: 'stun:stun.l.google.com:19302' }];
+      }
+
+      cachedIceServers = iceServersRaw;
+
+      if (data?.data?.expirySeconds) {
         const refreshMs = (data.data.expirySeconds - 300) * 1000;
         setTimeout(() => { cachedIceServers = null; }, refreshMs);
       }
@@ -2037,24 +2055,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function createPeerConnection(userId) {
     const iceServers = await getIceServers();
+
     const pc = new RTCPeerConnection({ iceServers });
 
     peerConnections.set(userId, pc);
 
     pc.addEventListener('icecandidate', event => {
-      if (event.candidate) {
-        if (currentConversation && currentConversation.isGroup) {
-          socket.emit('webrtc:group-candidate', {
-            conversationId: currentCallConvId,
-            toUserId: userId,
-            candidate: event.candidate
-          });
-        } else {
-          socket.emit('webrtc:candidate', {
-            toUserId: userId,
-            candidate: event.candidate
-          });
-        }
+      if (!event.candidate) return;
+
+      const payload = {
+        toUserId: userId,
+        candidate: event.candidate
+      };
+
+      if (currentConversation?.isGroup) {
+        payload.conversationId = currentCallConvId;
+        socket.emit('webrtc:group-candidate', payload);
+      } else {
+        socket.emit('webrtc:candidate', payload);
       }
     });
 
@@ -2082,6 +2100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     return pc;
   }
+
 
   async function handleOffer({ fromUserId, offer, conversationId, isGroup, type }) {
     currentCallType = type;

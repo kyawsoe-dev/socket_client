@@ -1498,7 +1498,7 @@ body {
 
 .message {
   display: flex;
-  margin-bottom: 8px;
+  margin: 5px 8px;
   align-items: flex-end;
   max-width: 100%;
   animation: messageSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);

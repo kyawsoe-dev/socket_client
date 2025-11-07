@@ -613,7 +613,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
       if (other && other.user.id === userId) {
         try {
-          const res = await fetch(`${API_BASE}/users/${userId}`, {
+          const res = await fetch(`${API_BASE}/conversations/users/${userId}`, {
             headers: apiHeaders(true),
           });
           if (res.ok) {

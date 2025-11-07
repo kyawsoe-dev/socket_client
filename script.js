@@ -2056,13 +2056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function createPeerConnection(userId) {
     const iceServers = await getIceServers();
 
-    console.log(iceServers, "ICE SERVERS");
-
     const pc = new RTCPeerConnection({ iceServers });
-
-    console.log(pc, "PC INSTANCE");
-
-    console.log('Created RTCPeerConnection for user:', userId);
 
     peerConnections.set(userId, pc);
 

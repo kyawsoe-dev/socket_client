@@ -444,7 +444,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function showChatPanel() {
-    console.log("Showing chat panel");
     document.querySelector(".sidebar").style.display = "none";
     document.querySelector(".chat-panel").classList.add("active");
     backBtn.style.display = "inline-flex";
@@ -663,6 +662,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  function updateGroupCounters(conv) {
+    if (convCount) {
+      const total = conv.members.length;
+      const online = conv.members.filter(m => onlineUsers.has(m.user.id)).length;
+      convCount.textContent = `${total} member${total > 1 ? 's' : ''}, ${online} online`;
+    }
+
+    if (groupInfoCount) {
+      const total = conv.members.length;
+      groupInfoCount.textContent = `${total} member${total > 1 ? 's' : ''}`;
+    }
+  }
+
   function appendSystemMessage(text) {
     const el = document.createElement("div");
     el.className = "system";
@@ -773,7 +785,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       return outputArray;
     }
   }
-
 
 
   messageForm?.addEventListener("submit", (e) => {
@@ -1091,6 +1102,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       renderConversations();
 
+      if (page === 1 && conversations.length > 0 && !currentConversation) {
+        const firstConv = conversations[0];
+        openConversation(firstConv);
+
+        const firstItem = conversationsList.querySelector(".conversation-item");
+        if (firstItem) firstItem.classList.add("active");
+      }
+
       const chatPanel = document.querySelector(".chat-panel");
       if (conversations.length > 0) chatPanel.style.display = "flex";
 
@@ -1254,6 +1273,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentConversation = updated;
       renderConversations();
       openGroupInfo(updated);
+      if (currentConversation?.id === updated.id) {
+        updateGroupCounters(updated);
+      }
     } catch (err) {
       console.error("refreshConversation", err);
       showAlert("Failed to refresh group", "error");
@@ -1359,6 +1381,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 showConfirmButton: false,
               });
               await refreshConversation(conv.id);
+              if (currentConversation?.id === conv.id) {
+                updateGroupCounters(currentConversation);
+              }
             } else {
               Swal.fire({ title: "Error", text: "Failed to remove member.", icon: "error" });
             }
@@ -1427,7 +1452,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateOnlineStatuses();
   }
 
-
   async function addGroupMember(conversationId, userIdToAdd) {
     const convId = Number(conversationId);
     const userId = Number(userIdToAdd);
@@ -1465,7 +1489,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderConversations();
       }
 
-      if (currentConversation?.id === convId) openConversation(data.conversation);
+      if (currentConversation?.id === convId) {
+        currentConversation = data.conversation;
+        openConversation(currentConversation);
+        updateGroupCounters(currentConversation);
+      }
 
       showAlert("Member added!", "success");
 
@@ -1491,6 +1519,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const userIdNum = parseInt(otherUserId, 10);
+
     if (isNaN(userIdNum) || userIdNum <= 0) {
       showAlert("Invalid user ID", "error");
       console.log("openOrCreatePrivateChat: Invalid number", otherUserId);
@@ -1596,6 +1625,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const groupIdNum = parseInt(groupId, 10);
+
     if (isNaN(groupIdNum) || groupIdNum <= 0) {
       showAlert("Invalid group ID", "error");
       console.log("openGroupChat: Invalid number", groupId);
@@ -1977,8 +2007,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       socket.emit('webrtc:offer', { toUserId, offer, type: currentCallType });
     }
   }
-
-
 
   async function getIceServers() {
     if (cachedIceServers) return cachedIceServers;

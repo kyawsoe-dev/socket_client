@@ -765,13 +765,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         const registration = await navigator.serviceWorker.ready;
 
-        const existingSubscription = await registration.pushManager.getSubscription();
-        if (existingSubscription) {
-          console.log('Existing push subscription found, unsubscribing...');
-          await existingSubscription.unsubscribe();
-          console.log('Old subscription removed.');
-        }
-
         const vapidRes = await fetch(`${API_BASE}/auth/vapid-public-key`);
         if (!vapidRes.ok) {
           throw new Error(`VAPID key fetch failed: ${vapidRes.status}`);
@@ -786,14 +779,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
 
         socket.emit('subscribe push', subscription);
         
         console.log('Native push subscribed');
 
-        // Webpushr integration
         if (window.webpushr) {
           const waitForWebpushr = (timeout = 8000) => {
             return new Promise((resolve, reject) => {
@@ -837,7 +829,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error('Push subscription failed:', err);
       }
     }
-
   }
 
 

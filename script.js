@@ -494,6 +494,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     socket.on("connect", () => {
       console.log("socket connected", socket.id);
       appendSystemMessage("Connected to server");
+
+      if (window.webpushr) {
+        window.webpushr('getSID', (sid) => {
+          console.log(sid, "sid")
+          if (sid) {
+            socket.emit('subscribe webpushr', { sid });
+            console.log('Webpushr SID sent to backend:', sid);
+          } else {
+            console.warn('No Webpushr SID found.');
+          }
+        });
+      }
     });
 
     socket.on("disconnect", () => {
@@ -769,6 +781,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         socket.emit('subscribe push', subscription);
+
+        if (window.webpushr) {
+          window.webpushr('getSID', sid => sid && socket.emit('subscribe webpushr', { sid }));
+        }
       } catch (err) {
         console.error('Push subscription failed:', err);
       }

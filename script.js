@@ -1,6 +1,5 @@
 const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
 const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
-
 var socket = null;
 let currentUser = null;
 let token = null;
@@ -14,19 +13,16 @@ let receivedMessages = new Set();
 let selectedGroupMembers = [];
 let onlineUsers = new Set();
 let lastActiveMap = new Map();
-
 const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
 const typingSound = new Audio("/assets/audio/typing.mp3");
 const callSound = new Audio("/assets/audio/call.mp3");
 const endSound = new Audio("/assets/audio/end.mp3");
-
 function apiHeaders(withAuth = true) {
   const headers = { "Content-Type": "application/json" };
   if (withAuth && token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
-
 function formatTime(iso) {
   try {
     const date = new Date(iso);
@@ -49,31 +45,26 @@ function formatTime(iso) {
     return "";
   }
 }
-
 function scrollToBottom(chatbox) {
   chatbox.scrollTop = chatbox.scrollHeight;
 }
-
 function showTyping(typingIndicator, text) {
   typingIndicator.textContent = text;
   if (typingTimeout) clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => (typingIndicator.textContent = ""), 2000);
 }
-
 function saveAuth(tk, user) {
   localStorage.setItem("token", tk);
   localStorage.setItem("user", JSON.stringify(user));
   token = tk;
   currentUser = user;
 }
-
 function clearAuth() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   token = null;
   currentUser = null;
 }
-
 function debounce(fn, delay = 300) {
   let timer;
   return (...args) => {
@@ -81,11 +72,9 @@ function debounce(fn, delay = 300) {
     timer = setTimeout(() => fn(...args), delay);
   };
 }
-
 document.addEventListener("DOMContentLoaded", async () => {
   const loginTab = document.getElementById("loginTab");
   const registerTab = document.getElementById("registerTab");
-
   const authView = document.getElementById("authView");
   const mainView = document.getElementById("mainView");
   const loginForm = document.getElementById("loginForm");
@@ -106,7 +95,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const openGroupModalBtn = document.getElementById("openGroupModalBtn");
   const searchUsersInput = document.getElementById("searchUsersInput");
   const searchedUsersList = document.getElementById("searchedUsersList");
-
   const chatbox = document.getElementById("chatMessages");
   const typingIndicator = document.getElementById("typing");
   const messageInput = document.getElementById("messageInput");
@@ -114,7 +102,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const convTitle = document.getElementById("convTitle");
   const convAvatar = document.getElementById("convAvatar");
   const backBtn = document.getElementById("backBtn");
-
   const groupModal = document.getElementById("groupModal");
   const closeGroupModalBtn = document.getElementById("closeGroupModalBtn");
   const createGroupBtn = document.getElementById("createGroupBtn");
@@ -122,9 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groupMemberSearch = document.getElementById("groupMemberSearch");
   const groupMembersList = document.getElementById("groupMembersList");
   const selectedMembers = document.getElementById("selectedMembers");
-
   const appTitle = document.getElementById("appTitle");
-
   const groupInfoModal = document.getElementById("groupInfoModal");
   const closeGroupInfo = document.getElementById("closeGroupInfo");
   const groupInfoAvatar = document.getElementById("groupInfoAvatar");
@@ -134,7 +119,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groupManage = document.getElementById("groupManage");
   const addMemberSearch = document.getElementById("addMemberSearch");
   const addMemberList = document.getElementById("addMemberList");
-
   const meSection = document.getElementById("meSection");
   const meDrawer = document.getElementById("meDrawer");
   const drawerOverlay = document.getElementById("drawerOverlay");
@@ -143,31 +127,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const drawerUsername = document.getElementById("drawerUsername");
   const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
   const drawerNewGroup = document.getElementById("drawerNewGroup");
-
-
   const suggestedContainer = document.getElementById("suggestedUsersContainer");
   const toggleBtn = document.getElementById("toggleSuggestedBtn");
-
   if (toggleBtn && suggestedContainer) {
     const saved = localStorage.getItem("suggestedPanelOpen");
     const savedOpen = saved === "true";
     const shouldBeOpen = savedOpen;
-
     suggestedContainer.classList.toggle("active", shouldBeOpen);
     toggleBtn.innerHTML = shouldBeOpen
       ? '<i class="fas fa-user-minus"></i>'
       : '<i class="fas fa-user-plus"></i>';
-
     toggleBtn.addEventListener("click", () => {
       const willBeOpen = !suggestedContainer.classList.contains("active");
       suggestedContainer.classList.toggle("active", willBeOpen);
       toggleBtn.innerHTML = willBeOpen
         ? '<i class="fas fa-user-minus"></i>'
         : '<i class="fas fa-user-plus"></i>';
-
       localStorage.setItem("suggestedPanelOpen", willBeOpen);
     });
-
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
@@ -180,30 +157,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 150);
     });
   }
-
   document.getElementById("openSidebarBtn")?.addEventListener("click", () => {
     document.querySelector(".sidebar").classList.add("active");
     document.getElementById("sidebarOverlay").classList.add("active");
   });
-
   document.getElementById("sidebarOverlay").addEventListener("click", () => {
     document.querySelector(".sidebar").classList.remove("active");
     document.getElementById("sidebarOverlay").classList.remove("active");
   });
-
   document.getElementById("backBtn").addEventListener("click", () => {
     document.querySelector(".chat-panel").classList.remove("active");
     document.querySelector(".sidebar").classList.add("active");
     document.getElementById("sidebarOverlay").classList.add("active");
   });
-
   if (emojiButton && messageInput) {
     try {
       const module = await import(
         "https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js"
       );
       const { EmojiButton } = module;
-
       const picker = new EmojiButton({ position: "top-end", theme: "auto" });
       picker.on("emoji", (selection) => {
         messageInput.value += selection.emoji;
@@ -217,7 +189,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       emojiButton.style.display = "none";
     }
   }
-
   function showAlert(message, type = "info") {
     Swal.fire({
       icon: type,
@@ -225,38 +196,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       confirmButtonText: "OK",
     });
   }
-
   function showAuthView() {
     authView.style.display = "";
     mainView.style.display = "none";
     groupModal.style.display = "none";
     appTitle.textContent = "KS Chat App — Login";
   }
-
   function showMainView() {
     authView.style.display = "none";
     mainView.style.display = "";
     appTitle.textContent = "KS Chat App";
   }
-
   loginTab.addEventListener("click", () => {
     loginTab.classList.add("active");
     registerTab.classList.remove("active");
     loginForm.classList.remove("hidden");
     registerForm.classList.add("hidden");
   });
-
   registerTab.addEventListener("click", () => {
     registerTab.classList.add("active");
     loginTab.classList.remove("active");
     registerForm.classList.remove("hidden");
     loginForm.classList.add("hidden");
   });
-
   let usernameValid = false;
   let emailValid = false;
   let passwordMatchValid = false;
-
   regUsername.addEventListener(
     "input",
     debounce(async () => {
@@ -268,7 +233,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSubmitState();
     }, 500)
   );
-
   regEmail.addEventListener(
     "input",
     debounce(async () => {
@@ -280,7 +244,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSubmitState();
     }, 500)
   );
-
   // Check field availability
   async function checkAvailability(field, value, msgElem) {
     if (!value) {
@@ -288,15 +251,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       msgElem.style.color = "";
       return true;
     }
-
     try {
       const res = await fetch(
         `${API_BASE}/auth/check?field=${field}&value=${encodeURIComponent(value)}`
       );
       const data = await res.json();
-
       const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1);
-
       if (data.available) {
         msgElem.textContent = `${fieldLabel} available`;
         msgElem.style.color = "green";
@@ -312,7 +272,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       return false;
     }
   }
-
   function checkPasswords() {
     if (!regPassword.value && !regConfirm.value) {
       passwordMatchMsg.textContent = "";
@@ -321,7 +280,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSubmitState();
       return;
     }
-
     if (regPassword.value === regConfirm.value) {
       passwordMatchMsg.textContent = "Passwords match";
       passwordMatchMsg.style.color = "green";
@@ -335,31 +293,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     updateSubmitState();
   }
-
   regPassword.addEventListener("input", checkPasswords);
   regConfirm.addEventListener("input", checkPasswords);
-
   function updateSubmitState() {
     submitBtn.disabled = !(usernameValid && emailValid && passwordMatchValid);
   }
-
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!(usernameValid && emailValid && passwordMatchValid)) {
       showAlert("Please fix errors before submitting.", "warning");
       return;
     }
-
     const registerBtn = registerForm.querySelector("button[type='submit']");
     registerBtn.disabled = true;
     const originalText = registerBtn.textContent;
     registerBtn.textContent = "Registering...";
-
     const username = regUsername.value.trim();
     const email = regEmail.value.trim();
     const displayName = document.getElementById("regDisplayName").value.trim();
     const password = regPassword.value;
-
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
@@ -382,17 +334,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       registerBtn.textContent = originalText;
     }
   });
-
   loginForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const loginBtn = loginForm.querySelector("button[type='submit']");
     const usernameOrEmail = loginIdentifier.value.trim();
     const password = loginPassword.value;
-
     loginBtn.disabled = true;
     const originalText = loginBtn.textContent;
     loginBtn.textContent = "Logging in...";
-
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
@@ -414,59 +363,47 @@ document.addEventListener("DOMContentLoaded", async () => {
       loginBtn.textContent = originalText;
     }
   });
-
   logoutBtn?.addEventListener("click", () => {
     if (socket) socket.disconnect();
     clearAuth();
     showAuthView();
   });
-
   function showConversationList() {
     const sidebar = document.querySelector(".sidebar");
     const chatPanel = document.querySelector(".chat-panel");
     const convMembers = document.getElementById("convMembers");
-
     sidebar.style.display = "flex";
     chatPanel.classList.remove("active");
-
     if (convMembers) convMembers.classList.add("hidden");
-
     if (backBtn) backBtn.style.display = "none";
-
     if (!conversations || conversations.length === 0) {
       chatPanel.style.display = "none";
     } else {
       chatPanel.style.display = "flex";
       chatbox.innerHTML = "";
     }
-
     document.querySelector('.chat-input').classList.add('hidden');
   }
-
   function showChatPanel() {
     document.querySelector(".sidebar").style.display = "none";
     document.querySelector(".chat-panel").classList.add("active");
     backBtn.style.display = "inline-flex";
     history.pushState({ chatOpen: true }, "");
   }
-
   backBtn?.addEventListener("click", () => {
     showConversationList();
     currentConversation = null;
     convTitle.textContent = "Select a conversation";
     convAvatar.textContent = "";
-
     const convMembers = document.getElementById("convMembers");
     if (convMembers) {
       convMembers.innerHTML = "";
       convMembers.classList.add("hidden");
     }
-
     if (chatbox) chatbox.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
     history.back();
   });
-
   // Handle browser back button
   window.addEventListener('popstate', (event) => {
     if (document.querySelector(".chat-panel").classList.contains("active")) {
@@ -475,9 +412,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       history.pushState({ chatOpen: true }, "");
     }
   });
-
   const header = document.querySelector(".chat-header-title");
-
   if (header) {
     header.addEventListener("click", () => {
       const convMembers = document.getElementById("convMembers");
@@ -486,23 +421,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
   function connectSocket() {
     if (!token) return;
     socket = io(SOCKET_URL, { auth: { token } });
-
     socket.on("connect", () => {
       console.log("socket connected", socket.id);
       appendSystemMessage("Connected to server");
     });
-
     socket.on("disconnect", () => {
       console.log("socket disconnected");
       appendSystemMessage("Disconnected from server");
     });
-
     socket.on("chat message", renderIncomingMessage);
-
     socket.on("message edited", (updated) => {
       const el = chatbox.querySelector(`[data-msg-id="${updated.id}"]`);
       if (el) {
@@ -512,14 +442,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         time.textContent = formatTime(updated.updatedAt || updated.createdAt) + " (edited)";
       }
     });
-
     socket.on("message deleted", (id) => {
       const el = chatbox.querySelector(`[data-msg-id="${id}"]`);
       if (el) {
         updateDeletedMessage(el);
       }
     });
-
     socket.on("typing", ({ conversationId, username }) => {
       if (
         currentConversation &&
@@ -534,7 +462,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         lastTypingEmit = now;
       }
     });
-
     socket.on("read", ({ conversationId, userId, lastReadAt }) => {
       if (
         currentConversation &&
@@ -551,33 +478,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
       }
     });
-
     socket.on("users online", (ids) => {
       onlineUsers = new Set(ids);
       updateOnlineStatuses();
       updateConvStatus();
     });
-
     socket.on("user online", ({ userId }) => {
       onlineUsers.add(userId);
       updateOnlineStatuses();
       updateConvStatus();
     });
-
     socket.on("user offline", async ({ userId }) => {
       onlineUsers.delete(userId);
       updateOnlineStatuses();
       await handleUserOffline(userId);
       updateConvStatus();
     });
-
-
     socket.on('webrtc:offer', (data) => {
       incomingCallModal.style.display = 'flex';
       callerName.textContent = `From ${data.fromUsername || 'Unknown User'}`;
       window.incomingCallData = data;
     });
-
     socket.on('webrtc:group-offer', (data) => {
       incomingCallModal.style.display = 'flex';
       const groupTitle = data.groupTitle || 'Group Call';
@@ -585,7 +506,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.incomingCallData = data;
       window.incomingCallData.isGroup = true;
     });
-
     socket.on('webrtc:answer', handleAnswer);
     socket.on('webrtc:candidate', handleCandidate);
     socket.on('webrtc:group-answer', handleAnswer);
@@ -594,20 +514,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       endCall();
       showAlert('Call ended', 'info');
     });
-
     socket.on('webrtc:group-end', (data) => {
       endCall();
       showAlert('Group call ended by a participant', 'info');
     });
-
     socket.on('callRejectedNotification', ({ from }) => {
       console.log(`Your call was rejected by user ${from}`);
       showAlert("Call rejected");
       endCall();
     });
-
   }
-
   async function handleUserOffline(userId) {
     if (currentConversation && !currentConversation.isGroup) {
       const other = currentConversation.members.find(m => m.user.id !== currentUser.id);
@@ -626,27 +542,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
   function updateOnlineStatuses() {
     document.querySelectorAll("[data-userid]").forEach((el) => {
       const userId = Number(el.dataset.userid);
       el.classList.toggle("online", onlineUsers.has(userId));
     });
   }
-
   function updateConvStatus() {
     if (!currentConversation || !convCount) return;
-
     if (currentConversation.isGroup) {
       const validMembers = currentConversation.members.filter(m => m && m.user);
       const total = validMembers.length;
       const onlineCount = validMembers.filter(m => onlineUsers.has(m.user.id)).length;
-
       convCount.textContent = `${total} member${total > 1 ? 's' : ''}, ${onlineCount} online`;
     } else {
       const validMembers = currentConversation.members.filter(m => m && m.user);
       const other = validMembers.find(m => m.user.id !== currentUser.id);
-
       if (other && other.user) {
         const id = other.user.id;
         if (onlineUsers.has(id)) {
@@ -660,21 +571,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
-
   function updateGroupCounters(conv) {
     if (convCount) {
       const total = conv.members.length;
       const online = conv.members.filter(m => onlineUsers.has(m.user.id)).length;
       convCount.textContent = `${total} member${total > 1 ? 's' : ''}, ${online} online`;
     }
-
     if (groupInfoCount) {
       const total = conv.members.length;
       groupInfoCount.textContent = `${total} member${total > 1 ? 's' : ''}`;
     }
   }
-
   function appendSystemMessage(text) {
     const el = document.createElement("div");
     el.className = "system";
@@ -682,37 +589,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     chatbox.appendChild(el);
     scrollToBottom(chatbox);
   }
-
   async function initAfterAuth() {
     const user = JSON.parse(localStorage.getItem("user")) || null;
     if (!token || !user) return;
-
     showMainView();
-
     const displayName = user.displayName || user.username;
     meDisplay.textContent = displayName;
-
     const meAvatar = document.getElementById("meAvatar");
     if (meAvatar) {
       meAvatar.textContent = displayName.charAt(0).toUpperCase();
     }
-
     // Drawer
     drawerAvatar.textContent = displayName.charAt(0).toUpperCase();
     drawerName.textContent = displayName;
     drawerUsername.textContent = `@${user.username}`;
-
     const drawerEmail = document.getElementById("drawerEmail");
     if (drawerEmail) {
       drawerEmail.textContent = user.email || "";
     }
-
     connectSocket();
     await loadConversations();
     await loadSuggestedUsers();
     await subscribeToPush();
     await getIceServers();
-
     if (!conversations || conversations.length === 0) {
       document.querySelector('.chat-input')?.classList.add('hidden');
       showConversationList();
@@ -721,18 +620,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (window.innerWidth > 768) {
       openConversation(conversations[0]);
     }
-
     if (meSection && meDrawer && drawerOverlay && drawerLogoutBtn) {
       meSection.addEventListener("click", () => {
         meDrawer.classList.add("open");
         drawerOverlay.classList.add("open");
       });
-
       drawerOverlay.addEventListener("click", () => {
         meDrawer.classList.remove("open");
         drawerOverlay.classList.remove("open");
       });
-
       drawerLogoutBtn.addEventListener("click", () => {
         clearAuth();
         if (socket) socket.disconnect();
@@ -741,7 +637,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       console.log("Drawer elements not found, skipping drawer initialization");
     }
-
     if ('Notification' in window && navigator.serviceWorker) {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
@@ -753,41 +648,49 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }).catch(err => console.error('Permission request error:', err));
     }
-
     function urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - base64String.length % 4) % 4);
       const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
       const rawData = window.atob(base64);
       return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
     }
-
     async function subscribeToPush() {
       try {
         const registration = await navigator.serviceWorker.ready;
-
         const vapidRes = await fetch(`${API_BASE}/auth/vapid-public-key`);
         if (!vapidRes.ok) {
           throw new Error(`VAPID key fetch failed: ${vapidRes.status}`);
         }
-
         const data = await vapidRes.json();
         const publicKey = data.publicKey?.trim();
-
         if (!publicKey || publicKey.includes('Error')) {
           throw new Error('Invalid VAPID key received');
         }
-
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
-
+        let subscription;
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+        } catch (err) {
+          if (err.name === 'InvalidStateError' && err.message.includes('different applicationServerKey')) {
+            const existingSub = await registration.pushManager.getSubscription();
+            if (existingSub) {
+              await existingSub.unsubscribe();
+              console.log('Unsubscribed from old push subscription');
+            }
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+          } else {
+            throw err;
+          }
+        }
         socket.emit('subscribe push', subscription);
-        
         console.log('Native push subscribed');
-
         if (window.webpushr) {
-          const waitForWebpushr = (timeout = 8000) => {
+          const waitForWebpushr = (timeout = 15000) => {
             return new Promise((resolve, reject) => {
               const start = Date.now();
               const check = () => {
@@ -807,7 +710,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               check();
             });
           };
-
           try {
             await waitForWebpushr();
             console.log('Webpushr SDK fully ready');
@@ -830,33 +732,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
-
   messageForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     sendMessage();
   });
-
   messageInput?.addEventListener("input", emitTyping);
-
   function emitTyping() {
     if (!socket?.connected || !currentConversation) return;
     socket.emit("typing", { conversationId: currentConversation.id });
   }
-
   async function sendMessage() {
     if (!currentConversation)
       return showAlert("Select a conversation first", "warning");
     const text = messageInput.value.trim();
     if (!text) return;
-
     const payload = {
       conversationId: currentConversation.id,
       content: text,
       type: "TEXT",
       metadata: {},
     };
-
     const optimisticId = `tmp-${Date.now()}`;
     const optimistic = {
       id: optimisticId,
@@ -871,7 +766,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     appendMessageToChat(optimistic, true);
     messageInput.value = "";
     scrollToBottom(chatbox);
-
     try {
       if (socket?.connected) {
         socket.emit("chat message", payload, (ack) => {
@@ -902,19 +796,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAlert("Failed to send message", "error");
     }
   }
-
   function appendMessageToChat(msg, optimistic = false) {
     if (receivedMessages.has(msg.id)) return;
     receivedMessages.add(msg.id);
-
     const el = document.createElement("div");
     el.className = `message ${msg.senderId === currentUser.id ? "right" : "left"
       }`;
     el.dataset.msgId = msg.id;
-
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-
     let name = "";
     if (msg.senderId === currentUser.id) {
       name = currentUser.displayName || currentUser.username;
@@ -931,68 +821,54 @@ document.addEventListener("DOMContentLoaded", async () => {
       nameSpan.textContent = name;
       bubble.appendChild(nameSpan);
     }
-
     const textSpan = document.createElement("div");
     textSpan.className = "text";
     textSpan.textContent = msg.content || "";
-
     const timeSpan = document.createElement("div");
     timeSpan.className = "timestamp";
     const isEdited = msg.updatedAt && new Date(msg.updatedAt) > new Date(msg.createdAt);
     timeSpan.textContent = formatTime(msg.createdAt) + (isEdited ? " (edited)" : "");
-
     bubble.appendChild(textSpan);
     bubble.appendChild(timeSpan);
-
     const avatar = document.createElement("div");
     avatar.className = "avatar";
     avatar.textContent = name.charAt(0).toUpperCase();
     el.appendChild(avatar);
     el.appendChild(bubble);
-
     if (msg.senderId === currentUser.id) {
       const editBtn = document.createElement("button");
       editBtn.className = "edit-btn";
       editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
       editBtn.onclick = () => editMessage(msg.id, bubble);
       el.appendChild(editBtn);
-
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "delete-btn";
       deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
       deleteBtn.onclick = () => deleteMessage(msg.id, el);
       el.appendChild(deleteBtn);
     }
-
     if (optimistic) el.style.opacity = "0.7";
     chatbox.appendChild(el);
     scrollToBottom(chatbox);
   }
-
   async function editMessage(id, bubbleEl) {
     const textEl = bubbleEl.querySelector(".text");
     const original = textEl.textContent.trim();
-
     textEl.innerHTML = `<textarea class="edit-message-input">${original}</textarea>`;
     const textarea = textEl.querySelector(".edit-message-input");
-
     textarea.style.height = "auto";
     textarea.style.height = textarea.scrollHeight + "px";
-
     textarea.focus();
-
     textarea.addEventListener("input", () => {
       textarea.style.height = "auto";
       textarea.style.height = textarea.scrollHeight + "px";
     });
-
     textarea.addEventListener("blur", async () => {
       const newContent = textarea.value.trim();
       if (newContent === original) {
         textEl.textContent = original;
         return;
       }
-
       try {
         if (socket.connected) {
           socket.emit("edit message", { messageId: id, content: newContent }, (ack) => {
@@ -1009,7 +885,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             headers: apiHeaders(true),
             body: JSON.stringify({ content: newContent }),
           });
-
           if (res.ok) {
             textEl.textContent = newContent;
           } else {
@@ -1023,7 +898,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         showAlert("Edit failed", "error");
       }
     });
-
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -1034,8 +908,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
-
   function deleteMessage(id, msgEl) {
     Swal.fire({
       title: "Delete message?",
@@ -1072,7 +944,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
   function updateDeletedMessage(el) {
     const text = el.querySelector(".text");
     text.textContent = "This message was deleted";
@@ -1083,7 +954,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.querySelector(".edit-btn")?.remove();
     el.querySelector(".delete-btn")?.remove();
   }
-
   function replaceOptimisticMessage(tmpId, realMsg) {
     const node = chatbox.querySelector(`[data-msg-id="${tmpId}"]`);
     if (node) {
@@ -1091,7 +961,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     appendMessageToChat(realMsg);
   }
-
   function renderIncomingMessage(msg) {
     if (receivedMessages.has(msg.id)) return;
     appendMessageToChat(msg);
@@ -1102,29 +971,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateConversationPreview(msg.conversationId, msg);
     scrollToBottom(chatbox);
   }
-
   function updateConversationPreview(convId, newMsg) {
     const convIndex = conversations.findIndex((c) => c.id === convId);
     if (convIndex === -1) return;
-
     conversations[convIndex].lastMessage = newMsg;
-
     const [conv] = conversations.splice(convIndex, 1);
     conversations.unshift(conv);
-
     renderConversations();
   }
-
   let currentConvPage = 1;
   let totalConvPages = 1;
   let loadingConversations = false;
-
   async function loadConversations(page = 1) {
     if (loadingConversations) return [];
     loadingConversations = true;
     const spinner = document.getElementById("loadingSpinner");
     spinner.style.display = "block";
-
     try {
       const res = await fetch(
         `${API_BASE}/conversations?page=${page}&limit=20`,
@@ -1134,30 +996,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       if (!res.ok) throw new Error("Failed to load conversations");
       const data = await res.json();
-
       const convs = data.data || data;
       totalConvPages = data.totalPages || 1;
-
       if (page === 1) {
         conversations = convs;
         conversationsList.innerHTML = "";
       } else {
         conversations.push(...convs);
       }
-
       renderConversations();
-
       if (page === 1 && conversations.length > 0 && !currentConversation) {
         const firstConv = conversations[0];
         openConversation(firstConv);
-
         const firstItem = conversationsList.querySelector(".conversation-item");
         if (firstItem) firstItem.classList.add("active");
       }
-
       const chatPanel = document.querySelector(".chat-panel");
       if (conversations.length > 0) chatPanel.style.display = "flex";
-
       return convs;
     } catch (err) {
       console.error("loadConversations", err);
@@ -1168,25 +1023,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadingConversations = false;
     }
   }
-
   const conversationsListEl = document.getElementById("conversationsList");
-
   conversationsListEl.addEventListener("scroll", async () => {
     if (loadingConversations) return;
-
     const scrollBottom =
       conversationsListEl.scrollTop + conversationsListEl.clientHeight;
     const nearBottom = scrollBottom >= conversationsListEl.scrollHeight - 10;
-
     if (nearBottom && currentConvPage < totalConvPages) {
       currentConvPage++;
       await loadConversations(currentConvPage);
     }
   });
-
   function renderConversations() {
     conversationsList.innerHTML = "";
-
     conversations.sort((a, b) => {
       const aTime = a.lastMessage
         ? new Date(a.lastMessage.createdAt).getTime()
@@ -1196,27 +1045,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         : 0;
       return bTime - aTime;
     });
-
     conversations.forEach((c) => {
       const li = document.createElement("li");
       li.className = `conversation-item${currentConversation && currentConversation.id === c.id ? " active" : ""
         }`;
-
       const title = c.isGroup
         ? c.title || "Untitled Group"
         : conversationTitleFromMembers(c.members);
-
       const preview = c.lastMessage?.content
         ? c.lastMessage.content.slice(0, 50) + "..."
         : "";
-
       const time = c.lastMessage ? formatTime(c.lastMessage.createdAt) : "";
-
       if (!c.isGroup) {
         const other = c.members.find((m) => m.user.id !== currentUser.id);
         li.dataset.userid = other?.user.id;
       }
-
       li.innerHTML = `
       <div class="conv-avatar">${title.charAt(0).toUpperCase()}</div>
       <div class="conv-info">
@@ -1227,58 +1070,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       </div>
     `;
-
       li.addEventListener("click", () => {
         openConversation(c);
         if (window.innerWidth <= 768) showChatPanel();
       });
-
       conversationsList.appendChild(li);
     });
-
     conversationsList.scrollTop = 0;
     updateOnlineStatuses();
   }
-
   function conversationTitleFromMembers(members) {
     if (!members || members.length !== 2) return;
-
     const other = members.find((m) => m.user && m.user.id !== currentUser.id);
-
     if (!other) return "Unknown User";
-
     return (
       other.user.displayName || other.user.username || `User ${other.user.id}`
     );
   }
-
   const convCount = document.getElementById("convCount");
-
   async function openConversation(conv) {
     currentConversation = conv;
-
     if (chatbox) chatbox.innerHTML = "";
-
     renderConversations();
-
     const title = conv.isGroup
       ? conv.title || "Group"
       : conversationTitleFromMembers(conv.members);
     convTitle.textContent = title;
     convAvatar.textContent = title.charAt(0).toUpperCase();
-
     if (conv.isGroup) {
       convTitle.onclick = () => openGroupInfo(conv);
     } else {
       convTitle.onclick = null;
     }
-
     if (socket?.connected) socket.emit("join", { conversationId: conv.id });
-
     await loadMessages(conv.id);
-
     if (socket?.connected) socket.emit("markRead", { conversationId: conv.id });
-
     if (!conv.isGroup) {
       const other = conv.members.find((m) => m.user.id !== currentUser.id);
       if (other && !lastActiveMap.has(other.user.id)) {
@@ -1295,17 +1121,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
     }
-
-
     updateConvStatus();
-
     if (window.innerWidth > 768) {
       document.querySelector(".chat-panel").style.display = "flex";
     }
-
     document.querySelector('.chat-input').classList.remove('hidden');
   }
-
   async function refreshConversation(id) {
     try {
       const res = await fetch(`${API_BASE}/conversations/${id}`, {
@@ -1326,31 +1147,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAlert("Failed to refresh group", "error");
     }
   }
-
-
   function updateGroupTitleEverywhere(newTitle) {
     if (convTitle) convTitle.textContent = newTitle;
     if (groupInfoName) groupInfoName.textContent = newTitle;
     if (currentConversation) currentConversation.title = newTitle;
   }
-
   function openGroupInfo(conv) {
     groupInfoModal.classList.add("active");
     groupInfoAvatar.textContent = conv.title?.charAt(0).toUpperCase() || "G";
     groupInfoName.textContent = conv.title || "Group";
     groupInfoCount.textContent = `${conv.members.length} member${conv.members.length !== 1 ? "s" : ""}`;
     const isOwner = conv.members.find(m => m && m.user && m.user.id === currentUser.id)?.role === "OWNER";
-
     groupManage.style.display = isOwner ? "block" : "none";
     editGroupTitleBtn.style.display = isOwner ? "inline-block" : "none";
-
     editGroupTitleBtn.onclick = () => {
       groupInfoName.contentEditable = true;
       groupInfoName.focus();
       editGroupTitleBtn.style.display = "none";
       saveGroupTitleBtn.style.display = "inline-block";
     };
-
     saveGroupTitleBtn.onclick = async () => {
       const newTitle = groupInfoName.textContent.trim();
       if (!newTitle) {
@@ -1379,7 +1194,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         showAlert("Failed to update title", "error");
       }
     };
-
     groupMemberList.innerHTML = conv.members.map(m => {
       const user = m.user;
       if (!user) return "";
@@ -1404,7 +1218,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `</div>`;
       return html;
     }).join("");
-
     document.querySelectorAll(".group-member").forEach(el => {
       el.querySelector(".remove-member-btn")?.addEventListener("click", async () => {
         const confirmResult = await Swal.fire({
@@ -1445,7 +1258,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         }
       });
-
       el.addEventListener("click", async (e) => {
         if (e.target.classList.contains("remove-member-btn")) return;
         const userId = el.dataset.userid;
@@ -1455,7 +1267,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     });
-
     addMemberSearch.value = "";
     addMemberList.innerHTML = "";
     addMemberSearch.addEventListener("input", debounce(async () => {
@@ -1500,24 +1311,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         showAlert("Search failed", "error");
       }
     }, 400));
-
     updateOnlineStatuses();
   }
-
   async function addGroupMember(conversationId, userIdToAdd) {
     const convId = Number(conversationId);
     const userId = Number(userIdToAdd);
-
     if (isNaN(convId) || convId <= 0) return showAlert("Invalid group", "error");
     if (isNaN(userId) || userId <= 0) return showAlert("Invalid user", "error");
-
     try {
       const res = await fetch(`${API_BASE}/conversations/${convId}/members`, {
         method: "POST",
         headers: apiHeaders(true),
         body: JSON.stringify({ userId }),
       });
-
       let errorMsg = "Could not add member";
       if (!res.ok) {
         let detail = "";
@@ -1532,68 +1338,54 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         return showAlert(errorMsg, "error");
       }
-
       const data = await res.json();
-
       const idx = conversations.findIndex(c => c.id === convId);
       if (idx !== -1) {
         conversations[idx] = data.conversation;
         renderConversations();
       }
-
       if (currentConversation?.id === convId) {
         currentConversation = data.conversation;
         openConversation(currentConversation);
         updateGroupCounters(currentConversation);
       }
-
       showAlert("Member added!", "success");
-
     } catch (err) {
       console.error("addGroupMember:", err);
       showAlert("Network error. Check connection.", "error");
     }
   }
-
   closeGroupInfo.onclick = () => {
     groupInfoModal.classList.remove("active");
     groupInfoName.contentEditable = false;
     editGroupTitleBtn.style.display = "none";
     saveGroupTitleBtn.style.display = "none";
   };
-
-
   async function openOrCreatePrivateChat(otherUserId) {
     if (!otherUserId || (typeof otherUserId !== 'string' && typeof otherUserId !== 'number')) {
       showAlert("Invalid user ID", "error");
       console.log("openOrCreatePrivateChat: Invalid otherUserId", otherUserId);
       return;
     }
-
     const userIdNum = parseInt(otherUserId, 10);
-
     if (isNaN(userIdNum) || userIdNum <= 0) {
       showAlert("Invalid user ID", "error");
       console.log("openOrCreatePrivateChat: Invalid number", otherUserId);
       return;
     }
-
     if (userIdNum === currentUser.id) {
       return;
     }
-
     const existingConv = conversations.find(
       (c) =>
         !c.isGroup &&
         c.members.some((m) => parseInt(m.user.id) === userIdNum)
     );
-
     if (existingConv) {
       console.log("Opening existing chat:", existingConv.id);
       openConversation(existingConv);
       return;
     }
-
     const loadingAlert = Swal.fire({
       title: "Creating chat...",
       allowOutsideClick: false,
@@ -1602,7 +1394,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         Swal.showLoading();
       }
     });
-
     try {
       const res = await fetch(`${API_BASE}/conversations/one-to-one`, {
         method: "POST",
@@ -1611,38 +1402,29 @@ document.addEventListener("DOMContentLoaded", async () => {
           otherUserId: userIdNum
         }),
       });
-
       loadingAlert.close();
-
       if (!res.ok) {
         let errorMessage = "Could not create chat";
-
         try {
           const errorData = await res.json();
           errorMessage = errorData.message || errorData.error || `Error ${res.status}`;
         } catch {
           errorMessage = `Server error (${res.status})`;
         }
-
         console.error(`API Error ${res.status}:`, errorMessage);
         showAlert(errorMessage, "error");
         return;
       }
-
       const newConv = await res.json();
-
       if (!newConv?.id) {
         console.error("Invalid conversation response:", newConv);
         showAlert("Chat created but failed to load", "error");
         return;
       }
-
       conversations.unshift(newConv);
       renderConversations();
       openConversation(newConv);
-
       console.log("New private chat created:", newConv.id);
-
       Swal.fire({
         icon: "success",
         title: "Chat created!",
@@ -1650,24 +1432,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         timer: 500,
         showConfirmButton: false
       });
-
     } catch (err) {
       loadingAlert.close();
-
       console.error("openOrCreatePrivateChat error:", err);
-
       let userMessage = "Could not create chat";
       if (err.name === "TypeError" && err.message.includes("fetch")) {
         userMessage = "No internet connection";
       } else if (err.message.includes("Failed to fetch")) {
         userMessage = "Network error. Check your connection.";
       }
-
       showAlert(userMessage, "error");
     }
   }
-
-
   function openGroupChat(groupId) {
     console.log(groupId, "g ID")
     if (!groupId || (typeof groupId !== "string" && typeof groupId !== "number")) {
@@ -1675,29 +1451,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.log("openGroupChat: Invalid groupId", groupId);
       return;
     }
-
     const groupIdNum = parseInt(groupId, 10);
-
     if (isNaN(groupIdNum) || groupIdNum <= 0) {
       showAlert("Invalid group ID", "error");
       console.log("openGroupChat: Invalid number", groupId);
       return;
     }
-
     const groupConv = conversations.find(
       (c) => c.isGroup && c.id === groupIdNum
     );
-
     if (!groupConv) {
       showAlert("Group conversation not found", "error");
       console.log("Group conversation not found for ID:", groupIdNum);
       return;
     }
-
     openConversation(groupConv);
   }
-
-
   async function loadMessages(conversationId, limit = 100, cursor) {
     try {
       const url = new URL(
@@ -1716,7 +1485,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("loadMessages", err);
     }
   }
-
   searchUsersInput?.addEventListener(
     "input",
     debounce(async () => {
@@ -1725,18 +1493,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         searchedUsersList.innerHTML = "";
         return;
       }
-
       try {
         const res = await fetch(
           `${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`,
           { headers: apiHeaders(true) }
         );
-
         if (!res.ok) throw new Error("Search failed");
-
         const data = await res.json();
         searchedUsersList.innerHTML = "";
-
         data.users.forEach((user) => {
           const li = document.createElement("li");
           li.className = "search-item user-item";
@@ -1758,7 +1522,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           searchedUsersList.appendChild(li);
         });
-
         data.groups.forEach((group) => {
           const li = document.createElement("li");
           li.className = "search-item group-item";
@@ -1778,15 +1541,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           searchedUsersList.appendChild(li);
         });
-
         updateOnlineStatuses();
       } catch (err) {
         console.error("Search failed", err);
       }
     }, 400)
   );
-
-
   openGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "flex";
     selectedGroupMembers = [];
@@ -1794,20 +1554,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     groupMembersList.innerHTML = "";
     groupMemberSearch.value = "";
   });
-
   drawerNewGroup?.addEventListener("click", () => {
     openGroupModalBtn?.click();
     meDrawer?.classList.remove("open");
     drawerOverlay?.classList.remove("open");
   });
-
   closeGroupModalBtn?.addEventListener("click", () => {
     groupModal.style.display = "none";
     selectedGroupMembers = [];
     selectedMembers.innerHTML = "";
     groupMembersList.innerHTML = "";
   });
-
   groupMemberSearch?.addEventListener(
     "input",
     debounce(async () => {
@@ -1855,7 +1612,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     })
   );
-
   function renderSelectedMembers() {
     selectedMembers.innerHTML = "";
     selectedGroupMembers.forEach((user) => {
@@ -1875,11 +1631,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedMembers.appendChild(span);
     });
   }
-
   createGroupBtn?.addEventListener("click", async () => {
     const title = groupTitle.value.trim();
     const memberIds = selectedGroupMembers.map((m) => m.id);
-
     if (memberIds.length < 2) {
       showAlert(
         "You must include at least 2 other members (plus yourself) to create a group.",
@@ -1887,26 +1641,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       return;
     }
-
     try {
       const res = await fetch(`${API_BASE}/conversations/group`, {
         method: "POST",
         headers: apiHeaders(true),
         body: JSON.stringify({ title, memberIds }),
       });
-
       if (!res.ok)
         throw new Error((await res.json()).message || "Create group failed");
-
       const group = await res.json();
       groupModal.style.display = "none";
       groupTitle.value = "";
       selectedGroupMembers = [];
       selectedMembers.innerHTML = "";
-
       await loadConversations();
       openConversation(group);
-
       if (window.innerWidth <= 768) {
         showChatPanel();
       }
@@ -1915,48 +1664,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAlert("Could not create group: " + err.message, "error");
     }
   });
-
   async function loadSuggestedUsers() {
     try {
       const res = await fetch(`${API_BASE}/conversations/users/suggested`, {
         headers: apiHeaders(true),
       });
-
       if (!res.ok) throw new Error("Failed to fetch suggested users");
       const users = await res.json();
-
       const existingUserIds = conversations.flatMap((c) =>
         c.members.map((m) => m.user.id)
       );
       const filteredUsers = users.filter(
         (u) => !existingUserIds.includes(u.id)
       );
-
       const suggestedList = document.getElementById("suggestedUsersList");
       suggestedList.innerHTML = "";
-
       filteredUsers.forEach((user) => {
         const li = document.createElement("li");
         li.classList.add("suggested-user-item");
         li.dataset.userid = user.id;
-
         li.innerHTML = `
           <div class="conv-avatar">
             ${(user.displayName || user.username).charAt(0).toUpperCase()}
           </div>
           <span>${user.displayName ? `${user.displayName} (@${user.username})` : user.username}</span>
         `;
-
-
         li.addEventListener("click", async () => {
           await openOrCreatePrivateChat(user.id);
           document.getElementById("suggestedUsersContainer").style.display =
             "none";
         });
-
         suggestedList.appendChild(li);
       });
-
       document.getElementById("suggestedUsersContainer").style.display =
         filteredUsers.length > 0 ? "block" : "none";
       updateOnlineStatuses();
@@ -1964,7 +1703,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("loadSuggestedUsers:", err);
     }
   }
-
   token = localStorage.getItem("token");
   const storedUser = localStorage.getItem("user");
   if (token && storedUser) {
@@ -1976,7 +1714,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAuthView();
     }
   } else showAuthView();
-
   let originalHeight = window.innerHeight;
   window.addEventListener('resize', () => {
     if (window.innerHeight < originalHeight) {
@@ -1986,14 +1723,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       originalHeight = window.innerHeight;
     }
   });
-
   let localStream;
   let peerConnections = new Map();
   let isAudioEnabled = true;
   let isVideoEnabled = true;
   let currentCallType = null; // 'audio' or 'video'
   let currentCallConvId = null;
-
   const audioCallBtn = document.getElementById('audioCallBtn');
   const videoCallBtn = document.getElementById('videoCallBtn');
   const callContainer = document.getElementById('callContainer');
@@ -2006,17 +1741,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const callerName = document.getElementById('callerName');
   const acceptCallBtn = document.getElementById('acceptCallBtn');
   const rejectCallBtn = document.getElementById('rejectCallBtn');
-
   audioCallBtn.addEventListener('click', () => startCall('audio'));
   videoCallBtn.addEventListener('click', () => startCall('video'));
-
   toggleAudioBtn.addEventListener('click', toggleAudio);
   toggleVideoBtn.addEventListener('click', toggleVideo);
   endCallBtn.addEventListener('click', endCall);
-
   acceptCallBtn.addEventListener('click', acceptCall);
   rejectCallBtn.addEventListener('click', rejectCall);
-
   async function startCall(type) {
     if (!currentConversation) return showAlert("Select a conversation first", "warning");
     currentCallType = type;
@@ -2048,7 +1779,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
   async function createOffer(toUserId, isGroup = false) {
     const pc = await createPeerConnection(toUserId);
     const offer = await pc.createOffer();
@@ -2059,39 +1789,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       socket.emit('webrtc:offer', { toUserId, offer, type: currentCallType });
     }
   }
-
   async function getIceServers() {
     if (cachedIceServers) return cachedIceServers;
-
     try {
       const res = await fetch(`${API_BASE}/conversations/get/turn-credentials`, {
         headers: apiHeaders(true),
       });
-
       console.log(res, 'TURN response');
-
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
       const data = await res.json();
-
       let iceServersRaw = data?.data?.iceServers ?? data?.iceServers ?? [];
-
       if (!Array.isArray(iceServersRaw)) {
         iceServersRaw = [iceServersRaw];
       }
-
       if (!iceServersRaw.length) {
         console.log('No ICE servers returned, using minimal STUN fallback');
         iceServersRaw = [{ urls: 'stun:stun.l.google.com:19302' }];
       }
-
       cachedIceServers = iceServersRaw;
-
       if (data?.data?.expirySeconds) {
         const refreshMs = (data.data.expirySeconds - 300) * 1000;
         setTimeout(() => { cachedIceServers = null; }, refreshMs);
       }
-
       return cachedIceServers;
     } catch (err) {
       console.log('TURN fetch failed - using minimal STUN fallback', err);
@@ -2099,22 +1818,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       return cachedIceServers;
     }
   }
-
   async function createPeerConnection(userId) {
     const iceServers = await getIceServers();
-
     const pc = new RTCPeerConnection({ iceServers });
-
     peerConnections.set(userId, pc);
-
     pc.addEventListener('icecandidate', event => {
       if (!event.candidate) return;
-
       const payload = {
         toUserId: userId,
         candidate: event.candidate
       };
-
       if (currentConversation?.isGroup) {
         payload.conversationId = currentCallConvId;
         socket.emit('webrtc:group-candidate', payload);
@@ -2122,7 +1835,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         socket.emit('webrtc:candidate', payload);
       }
     });
-
     pc.addEventListener('track', event => {
       let remoteVideo = document.querySelector(`#remote-${userId}`);
       if (!remoteVideo) {
@@ -2136,19 +1848,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         remoteVideo.srcObject = event.streams[0];
       }
     });
-
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
         endCallForPeer(userId);
       }
     });
-
     return pc;
   }
-
-
   async function handleOffer({ fromUserId, offer, conversationId, isGroup, type }) {
     currentCallType = type;
     const pc = await createPeerConnection(fromUserId);
@@ -2161,7 +1868,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       socket.emit('webrtc:answer', { toUserId: fromUserId, answer });
     }
   }
-
   async function handleAnswer({ fromUserId, answer }) {
     const pc = peerConnections.get(fromUserId);
     if (pc) {
@@ -2172,7 +1878,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
   async function handleCandidate({ fromUserId, candidate }) {
     const pc = peerConnections.get(fromUserId);
     if (pc) {
@@ -2183,17 +1888,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
   async function acceptCall() {
     incomingCallModal.style.display = 'none';
     const data = window.incomingCallData;
-
     if (data.isGroup) {
       await openGroupChat(data.conversationId);
     } else {
       await openOrCreatePrivateChat(data.fromUserId);
     }
-
     if (!localStream) {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({
@@ -2208,33 +1910,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
     }
-
     if (data.isGroup) {
       handleOffer({ fromUserId: data.fromUserId, offer: data.offer, conversationId: data.conversationId, isGroup: true, type: data.type });
     } else {
       handleOffer({ fromUserId: data.fromUserId, offer: data.offer, type: data.type });
     }
   }
-
   function rejectCall() {
     incomingCallModal.style.display = 'none';
     const data = window.incomingCallData;
     socket.emit('callRejected', { toUserId: data.fromUserId, from: currentUser.id });
   }
-
   function toggleAudio() {
     isAudioEnabled = !isAudioEnabled;
     localStream.getAudioTracks()[0].enabled = isAudioEnabled;
     toggleAudioBtn.classList.toggle('off', !isAudioEnabled);
   }
-
   function toggleVideo() {
     if (currentCallType !== 'video') return;
     isVideoEnabled = !isVideoEnabled;
     localStream.getVideoTracks()[0].enabled = isVideoEnabled;
     toggleVideoBtn.classList.toggle('off', !isVideoEnabled);
   }
-
   function endCall() {
     peerConnections.forEach((pc, userId) => {
       pc.close();
@@ -2255,7 +1952,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentCallConvId = null;
     endSound.play().catch(err => console.error('End sound error:', err));
   }
-
   function endCallForPeer(userId) {
     const pc = peerConnections.get(userId);
     if (pc) {
@@ -2269,7 +1965,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 });
-
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker

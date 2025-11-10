@@ -59,21 +59,16 @@ self.addEventListener("push", event => {
   );
 });
 
-self.addEventListener("notificationclick", event => {
+self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.conversationId
-    ? `/chat?conv=${event.notification.data.conversationId}`
-    : "/";
+  const convId = event.notification.data?.conversationId;
+  const url = convId ? `/index.html?conv=${convId}` : '/';
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientsArr => {
-      for (const client of clientsArr) {
-        if (client.url.includes("/chat")) {
-          client.focus();
-          return;
-        }
-      }
-      return clients.openWindow(urlToOpen);
-    })
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientsArr => {
+        for (const c of clientsArr) if (c.url.includes('/index.html')) return c.focus();
+        return clients.openWindow(url);
+      })
   );
 });

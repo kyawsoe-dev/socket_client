@@ -1,286 +1,412 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"
+    />
+    <title id="appTitle">KS Chat App</title>
+    <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <script>
+      (function (w, d, s, id) {
+        if (typeof w.webpushr !== "undefined") return;
+        w.webpushr =
+          w.webpushr ||
+          function () {
+            (w.webpushr.q = w.webpushr.q || []).push(arguments);
+          };
+        var js,
+          fjs = d.getElementsByTagName(s)[0];
+        js = d.createElement(s);
+        js.id = id;
+        js.async = 1;
+        js.src = "https://cdn.webpushr.com/app.min.js";
+        fjs.parentNode.appendChild(js);
+      })(window, document, "script", "webpushr-jssdk");
+      webpushr("setup", {
+        key: "BIGHJuuAN9FOYywI8zHSFw6BYfygQljHoAuOeRhd5e9UVvyi0FZKY9K1s3CBkcWvQzarZSdAavPws5BjLTaZu_E",
+      });
+    </script>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-  <title id="appTitle">KS Chat App</title>
-  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
-</head>
+  <body>
+    <div id="sidebarOverlay" class="overlay" style="display: none"></div>
 
-<body>
-  <div id="sidebarOverlay" class="overlay" style="display: none"></div>
+    <div id="authView" class="auth-view">
+      <div class="auth-card">
+        <div class="logo-container">
+          <img
+            src="/assets/images/icon-512.png"
+            alt="KS Chat Logo"
+            class="auth-logo"
+          />
+        </div>
+        <h2>Welcome to <span class="brand">KS Chat App</span></h2>
+        <p class="subtitle">Connect instantly with your friends</p>
 
-  <div id="authView" class="auth-view">
-    <div class="auth-card">
-      <div class="logo-container">
-        <img src="/assets/images/icon-512.png" alt="KS Chat Logo" class="auth-logo" />
-      </div>
-      <h2>Welcome to <span class="brand">KS Chat App</span></h2>
-      <p class="subtitle">Connect instantly with your friends</p>
-
-      <div class="tab-container">
-        <button id="loginTab" class="tab-btn active">Login</button>
-        <button id="registerTab" class="tab-btn">Register</button>
-      </div>
-
-      <form id="loginForm" class="auth-form">
-        <label for="loginIdentifier">Username or Email <span class="required">*</span></label>
-        <input id="loginIdentifier" type="text" placeholder="Username or Email" required autocomplete="username" />
-
-        <label for="loginPassword">Password <span class="required">*</span></label>
-        <div class="password-field">
-          <input id="loginPassword" type="password" placeholder="Password" required autocomplete="current-password" />
-          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('loginPassword', this)"></i>
+        <div class="tab-container">
+          <button id="loginTab" class="tab-btn active">Login</button>
+          <button id="registerTab" class="tab-btn">Register</button>
         </div>
 
-        <button type="submit" class="primary-btn login-btn">Login</button>
-      </form>
+        <form id="loginForm" class="auth-form">
+          <label for="loginIdentifier"
+            >Username or Email <span class="required">*</span></label
+          >
+          <input
+            id="loginIdentifier"
+            type="text"
+            placeholder="Username or Email"
+            required
+            autocomplete="username"
+          />
 
-      <form id="registerForm" class="auth-form hidden">
-        <label for="regDisplayName">Full Name <span class="required">*</span></label>
-        <input id="regDisplayName" type="text" placeholder="Full Name" required autocomplete="name" />
-
-        <label for="regUsername">Username <span class="required">*</span></label>
-        <input id="regUsername" type="text" placeholder="Username" required autocomplete="username" />
-        <small id="usernameMsg" class="availability-msg"></small>
-
-        <label for="regEmail">Email <span class="required">*</span></label>
-        <input id="regEmail" type="email" placeholder="Email" required autocomplete="email" />
-        <small id="emailMsg" class="availability-msg"></small>
-
-        <label for="regPassword">Password <span class="required">*</span></label>
-        <div class="password-field">
-          <input id="regPassword" type="password" placeholder="Password" required autocomplete="new-password" />
-          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regPassword', this)"></i>
-        </div>
-
-        <label for="regConfirmPassword">Confirm Password <span class="required">*</span></label>
-        <div class="password-field">
-          <input id="regConfirmPassword" type="password" placeholder="Confirm Password" required
-            autocomplete="new-password" />
-          <i class="fa-solid fa-eye toggle-eye" onclick="togglePassword('regConfirmPassword', this)"></i>
-        </div>
-
-        <small id="passwordMatchMsg" class="password-msg"></small>
-
-        <button type="submit" class="primary-btn">Register</button>
-      </form>
-    </div>
-  </div>
-
-  <div id="mainView" class="main-view" style="display: none">
-    <div class="chat-container">
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <div id="meSection" class="me-section">
-            <div id="meAvatar" class="me-avatar"></div>
-            <span id="meDisplay" class="me-display"></span>
+          <label for="loginPassword"
+            >Password <span class="required">*</span></label
+          >
+          <div class="password-field">
+            <input
+              id="loginPassword"
+              type="password"
+              placeholder="Password"
+              required
+              autocomplete="current-password"
+            />
+            <i
+              class="fa-solid fa-eye toggle-eye"
+              onclick="togglePassword('loginPassword', this)"
+            ></i>
           </div>
 
-          <button id="toggleSuggestedBtn" class="icon-btn" title="Toggle suggested users">
-            <i class="fas fa-user-plus"></i>
-          </button>
-        </div>
+          <button type="submit" class="primary-btn login-btn">Login</button>
+        </form>
 
-        <!-- Drawer -->
-        <div id="drawerOverlay" class="drawer-overlay"></div>
+        <form id="registerForm" class="auth-form hidden">
+          <label for="regDisplayName"
+            >Full Name <span class="required">*</span></label
+          >
+          <input
+            id="regDisplayName"
+            type="text"
+            placeholder="Full Name"
+            required
+            autocomplete="name"
+          />
 
-        <div id="meDrawer" class="me-drawer">
-          <div class="drawer-header">
-            <div id="drawerAvatar" class="drawer-avatar"></div>
-            <div class="drawer-info">
-              <div id="drawerName" class="drawer-name"></div>
-              <div id="drawerUsername" class="drawer-username"></div>
-              <div id="drawerEmail" class="drawer-email"></div>
-            </div>
+          <label for="regUsername"
+            >Username <span class="required">*</span></label
+          >
+          <input
+            id="regUsername"
+            type="text"
+            placeholder="Username"
+            required
+            autocomplete="username"
+          />
+          <small id="usernameMsg" class="availability-msg"></small>
+
+          <label for="regEmail">Email <span class="required">*</span></label>
+          <input
+            id="regEmail"
+            type="email"
+            placeholder="Email"
+            required
+            autocomplete="email"
+          />
+          <small id="emailMsg" class="availability-msg"></small>
+
+          <label for="regPassword"
+            >Password <span class="required">*</span></label
+          >
+          <div class="password-field">
+            <input
+              id="regPassword"
+              type="password"
+              placeholder="Password"
+              required
+              autocomplete="new-password"
+            />
+            <i
+              class="fa-solid fa-eye toggle-eye"
+              onclick="togglePassword('regPassword', this)"
+            ></i>
           </div>
 
-          <hr class="drawer-divider" />
-
-          <!-- Menu Section -->
-          <ul class="drawer-menu">
-            <li id="drawerNewGroup">
-              <i class="fas fa-user-friends"></i> New Group
-            </li>
-            <li><i class="fas fa-address-book"></i> Contacts</li>
-            <li><i class="fas fa-bookmark"></i> Saved Messages</li>
-            <li><i class="fas fa-cog"></i> Settings</li>
-            <li><i class="fas fa-bell"></i> Notifications</li>
-            <li><i class="fas fa-question-circle"></i> Help</li>
-          </ul>
-
-          <hr class="drawer-divider" />
-
-          <!-- Footer Section -->
-          <div class="drawer-footer">
-            <button id="drawerLogoutBtn" class="drawer-logout-btn">
-              <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-
-            <div class="drawer-meta">
-              <span class="app-version">Version 1.0.0</span>
-              <span class="rights-text">© 2025 KS Chat App. All rights reserved.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="conversations-section">
-          <button id="openGroupModalBtn" class="new-chat-btn">
-            New Group
-          </button>
-        </div>
-        <input id="searchUsersInput" type="text" placeholder="Search users with name" class="search-input" />
-        <ul id="searchedUsersList" class="users-list"></ul>
-        <ul id="conversationsList" class="conversations-list"></ul>
-
-        <div id="loadingSpinner" class="loading">Loading...</div>
-      </div>
-
-      <div class="chat-panel">
-        <div class="chat-header">
-          <button id="backBtn" class="back-btn" style="display: none">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <div class="chat-header-content">
-            <div class="chat-header-content">
-              <div class="chat-header-title" id="convHeader">
-                <div class="conv-avatar" id="convAvatar">G</div>
-                <div class="conv-info">
-                  <h2 id="convTitle" class="group-title">
-                    Select a conversation
-                  </h2>
-                  <span id="convCount" class="conv-count">0 members</span>
-                </div>
-              </div>
-
-              <div class="chat-actions">
-                <button id="audioCallBtn" class="icon-btn" title="Audio Call">
-                  <i class="fas fa-phone"></i>
-                </button>
-                <button id="videoCallBtn" class="icon-btn" title="Video Call">
-                  <i class="fas fa-video"></i>
-                </button>
-              </div>
-            </div>
+          <label for="regConfirmPassword"
+            >Confirm Password <span class="required">*</span></label
+          >
+          <div class="password-field">
+            <input
+              id="regConfirmPassword"
+              type="password"
+              placeholder="Confirm Password"
+              required
+              autocomplete="new-password"
+            />
+            <i
+              class="fa-solid fa-eye toggle-eye"
+              onclick="togglePassword('regConfirmPassword', this)"
+            ></i>
           </div>
 
-          <div id="groupInfoModal" class="group-info-modal">
-            <div class="group-info-content">
-              <div class="group-info-header">
-                <div class="group-info-avatar" id="groupInfoAvatar"></div>
-                <div class="group-info-title">
-                  <div class="title-row">
-                    <h3 id="groupInfoName" contenteditable="false"></h3>
-                    <div class="title-actions">
-                      <button id="editGroupTitleBtn" class="title-btn" title="Edit">
-                        <i class="fas fa-pen"></i>
-                      </button>
-                      <button id="saveGroupTitleBtn" class="title-btn" title="Save">
-                        <i class="fas fa-check"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <p id="groupInfoCount"></p>
-                </div>
-                <button id="closeGroupInfo" class="close-btn">&times;</button>
-              </div>
-              <div class="group-member-list" id="groupMemberList"></div>
-              <div class="group-manage" id="groupManage" style="display: none">
-                <input id="addMemberSearch" type="text" placeholder="Search to add..." class="search-input" />
-                <ul id="addMemberList" class="users-list"></ul>
-              </div>
-            </div>
-          </div>
-        </div>
+          <small id="passwordMatchMsg" class="password-msg"></small>
 
-        <div id="chatMessages" class="chat-messages"></div>
-
-        <div id="typing" class="typing"></div>
-
-        <form id="messageForm" class="chat-input">
-          <input id="messageInput" type="text" placeholder="Type your message..." required />
-          <button type="button" id="emojiBtn" class="emoji-btn">
-            <i class="far fa-smile"></i>
-          </button>
-          <button type="submit" id="sendButton" class="send-btn">
-            <i class="fas fa-paper-plane"></i>
-          </button>
+          <button type="submit" class="primary-btn">Register</button>
         </form>
       </div>
-      <div id="suggestedUsersContainer" class="suggested-right">
-        <div class="suggested-header">
-          <h4><i class="fas fa-user-plus"></i> Suggested Users</h4>
+    </div>
+
+    <div id="mainView" class="main-view" style="display: none">
+      <div class="chat-container">
+        <div class="sidebar">
+          <div class="sidebar-header">
+            <div id="meSection" class="me-section">
+              <div id="meAvatar" class="me-avatar"></div>
+              <span id="meDisplay" class="me-display"></span>
+            </div>
+
+            <button
+              id="toggleSuggestedBtn"
+              class="icon-btn"
+              title="Toggle suggested users"
+            >
+              <i class="fas fa-user-plus"></i>
+            </button>
+          </div>
+
+          <!-- Drawer -->
+          <div id="drawerOverlay" class="drawer-overlay"></div>
+
+          <div id="meDrawer" class="me-drawer">
+            <div class="drawer-header">
+              <div id="drawerAvatar" class="drawer-avatar"></div>
+              <div class="drawer-info">
+                <div id="drawerName" class="drawer-name"></div>
+                <div id="drawerUsername" class="drawer-username"></div>
+                <div id="drawerEmail" class="drawer-email"></div>
+              </div>
+            </div>
+
+            <hr class="drawer-divider" />
+
+            <!-- Menu Section -->
+            <ul class="drawer-menu">
+              <li id="drawerNewGroup">
+                <i class="fas fa-user-friends"></i> New Group
+              </li>
+              <li><i class="fas fa-address-book"></i> Contacts</li>
+              <li><i class="fas fa-bookmark"></i> Saved Messages</li>
+              <li><i class="fas fa-cog"></i> Settings</li>
+              <li><i class="fas fa-bell"></i> Notifications</li>
+              <li><i class="fas fa-question-circle"></i> Help</li>
+            </ul>
+
+            <hr class="drawer-divider" />
+
+            <!-- Footer Section -->
+            <div class="drawer-footer">
+              <button id="drawerLogoutBtn" class="drawer-logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+              </button>
+
+              <div class="drawer-meta">
+                <span class="app-version">Version 1.0.0</span>
+                <span class="rights-text"
+                  >© 2025 KS Chat App. All rights reserved.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="conversations-section">
+            <button id="openGroupModalBtn" class="new-chat-btn">
+              New Group
+            </button>
+          </div>
+          <input
+            id="searchUsersInput"
+            type="text"
+            placeholder="Search users with name"
+            class="search-input"
+          />
+          <ul id="searchedUsersList" class="users-list"></ul>
+          <ul id="conversationsList" class="conversations-list"></ul>
+
+          <div id="loadingSpinner" class="loading">Loading...</div>
         </div>
-        <!-- Suggested content -->
-        <div class="suggested-content">
-          <ul id="suggestedUsersList" class="suggested-list"></ul>
+
+        <div class="chat-panel">
+          <div class="chat-header">
+            <button id="backBtn" class="back-btn" style="display: none">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="chat-header-content">
+              <div class="chat-header-content">
+                <div class="chat-header-title" id="convHeader">
+                  <div class="conv-avatar" id="convAvatar">G</div>
+                  <div class="conv-info">
+                    <h2 id="convTitle" class="group-title">
+                      Select a conversation
+                    </h2>
+                    <span id="convCount" class="conv-count">0 members</span>
+                  </div>
+                </div>
+
+                <div class="chat-actions">
+                  <button id="audioCallBtn" class="icon-btn" title="Audio Call">
+                    <i class="fas fa-phone"></i>
+                  </button>
+                  <button id="videoCallBtn" class="icon-btn" title="Video Call">
+                    <i class="fas fa-video"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="groupInfoModal" class="group-info-modal">
+              <div class="group-info-content">
+                <div class="group-info-header">
+                  <div class="group-info-avatar" id="groupInfoAvatar"></div>
+                  <div class="group-info-title">
+                    <div class="title-row">
+                      <h3 id="groupInfoName" contenteditable="false"></h3>
+                      <div class="title-actions">
+                        <button
+                          id="editGroupTitleBtn"
+                          class="title-btn"
+                          title="Edit"
+                        >
+                          <i class="fas fa-pen"></i>
+                        </button>
+                        <button
+                          id="saveGroupTitleBtn"
+                          class="title-btn"
+                          title="Save"
+                        >
+                          <i class="fas fa-check"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <p id="groupInfoCount"></p>
+                  </div>
+                  <button id="closeGroupInfo" class="close-btn">&times;</button>
+                </div>
+                <div class="group-member-list" id="groupMemberList"></div>
+                <div
+                  class="group-manage"
+                  id="groupManage"
+                  style="display: none"
+                >
+                  <input
+                    id="addMemberSearch"
+                    type="text"
+                    placeholder="Search to add..."
+                    class="search-input"
+                  />
+                  <ul id="addMemberList" class="users-list"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="chatMessages" class="chat-messages"></div>
+
+          <div id="typing" class="typing"></div>
+
+          <form id="messageForm" class="chat-input">
+            <input
+              id="messageInput"
+              type="text"
+              placeholder="Type your message..."
+              required
+            />
+            <button type="button" id="emojiBtn" class="emoji-btn">
+              <i class="far fa-smile"></i>
+            </button>
+            <button type="submit" id="sendButton" class="send-btn">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+        <div id="suggestedUsersContainer" class="suggested-right">
+          <div class="suggested-header">
+            <h4><i class="fas fa-user-plus"></i> Suggested Users</h4>
+          </div>
+          <!-- Suggested content -->
+          <div class="suggested-content">
+            <ul id="suggestedUsersList" class="suggested-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="callContainer" class="call-container" style="display: none">
+        <div id="localVideoContainer" class="video-container local">
+          <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        <div id="remoteVideos" class="remote-videos"></div>
+        <div class="call-controls">
+          <button id="toggleAudioBtn"><i class="fas fa-microphone"></i></button>
+          <button id="toggleVideoBtn"><i class="fas fa-video"></i></button>
+          <button id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
+        </div>
+      </div>
+
+      <div id="incomingCallModal" class="modal" style="display: none">
+        <div class="modal-content">
+          <h3>Incoming Call</h3>
+          <p id="callerName">User Name</p>
+          <div class="call-modal-actions">
+            <button id="acceptCallBtn" title="Accept">
+              <i class="fas fa-phone"></i>
+            </button>
+            <button id="rejectCallBtn" title="Reject">
+              <i class="fas fa-phone-slash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="groupModal" class="modal" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Create Group</h3>
+            <button id="closeGroupModalBtn" class="close-modal-btn">
+              &times;
+            </button>
+          </div>
+
+          <input id="groupTitle" type="text" placeholder="Group Title" />
+          <input
+            id="groupMemberSearch"
+            type="text"
+            placeholder="Search members by name..."
+          />
+          <ul id="groupMembersList" class="users-list"></ul>
+          <div id="selectedMembers" class="selected-members"></div>
+          <button id="createGroupBtn" class="primary-btn">Create</button>
         </div>
       </div>
     </div>
 
-    <div id="callContainer" class="call-container" style="display: none">
-      <div id="localVideoContainer" class="video-container local">
-        <video id="localVideo" autoplay playsinline muted></video>
-      </div>
-      <div id="remoteVideos" class="remote-videos"></div>
-      <div class="call-controls">
-        <button id="toggleAudioBtn"><i class="fas fa-microphone"></i></button>
-        <button id="toggleVideoBtn"><i class="fas fa-video"></i></button>
-        <button id="endCallBtn"><i class="fas fa-phone-slash"></i></button>
-      </div>
-    </div>
+    <script src="/assets/js/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="script.js"></script>
 
-    <div id="incomingCallModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <h3>Incoming Call</h3>
-        <p id="callerName">User Name</p>
-        <div class="call-modal-actions">
-          <button id="acceptCallBtn" title="Accept">
-            <i class="fas fa-phone"></i>
-          </button>
-          <button id="rejectCallBtn" title="Reject">
-            <i class="fas fa-phone-slash"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="groupModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Create Group</h3>
-          <button id="closeGroupModalBtn" class="close-modal-btn">
-            &times;
-          </button>
-        </div>
-
-        <input id="groupTitle" type="text" placeholder="Group Title" />
-        <input id="groupMemberSearch" type="text" placeholder="Search members by name..." />
-        <ul id="groupMembersList" class="users-list"></ul>
-        <div id="selectedMembers" class="selected-members"></div>
-        <button id="createGroupBtn" class="primary-btn">Create</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="/assets/js/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script type="module" src="script.js"></script>
-
-  <script>
-    function togglePassword(id, icon) {
-      const input = document.getElementById(id);
-      const isHidden = input.type === "password";
-      input.type = isHidden ? "text" : "password";
-      icon.classList.toggle("fa-eye");
-      icon.classList.toggle("fa-eye-slash");
-    }
-  </script>
-</body>
-
+    <script>
+      function togglePassword(id, icon) {
+        const input = document.getElementById(id);
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        icon.classList.toggle("fa-eye");
+        icon.classList.toggle("fa-eye-slash");
+      }
+    </script>
+  </body>
 </html>

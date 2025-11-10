@@ -1,5 +1,8 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
-const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+// const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+// const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+
+const API_BASE = "http://localhost:3000/api/v1";
+const SOCKET_URL = "http://localhost:3000";
 
 var socket = null;
 let currentUser = null;
@@ -494,18 +497,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     socket.on("connect", () => {
       console.log("socket connected", socket.id);
       appendSystemMessage("Connected to server");
-
-      if (window.webpushr) {
-        window.webpushr('getSID', (sid) => {
-          console.log(sid, "sid")
-          if (sid) {
-            socket.emit('subscribe webpushr', { sid });
-            console.log('Webpushr SID sent to backend:', sid);
-          } else {
-            console.warn('No Webpushr SID found.');
-          }
-        });
-      }
     });
 
     socket.on("disconnect", () => {
@@ -722,6 +713,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     connectSocket();
     await loadConversations();
     await loadSuggestedUsers();
+    await subscribeToPush();
     await getIceServers();
 
     if (!conversations || conversations.length === 0) {
@@ -765,15 +757,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       }).catch(err => console.error('Permission request error:', err));
     }
 
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+    }
+
     async function subscribeToPush() {
       try {
-        const publicKey = await fetch(`${API_BASE}/auth/vapid-public-key`).then(r => {
-          if (!r.ok) throw new Error('Failed to fetch VAPID key');
-          return r.text();
-        });
+        const registration = await navigator.serviceWorker.ready;
 
-        const registration = await navigator.serviceWorker.register('/service-worker.js');
-        await navigator.serviceWorker.ready;
+        const vapidRes = await fetch(`${API_BASE}/auth/vapid-public-key`);
+        if (!vapidRes.ok) {
+          throw new Error(`VAPID key fetch failed: ${vapidRes.status}`);
+        }
+
+        const data = await vapidRes.json();
+        const publicKey = data.publicKey?.trim();
+
+        if (!publicKey || publicKey.includes('Error')) {
+          throw new Error('Invalid VAPID key received');
+        }
 
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
@@ -781,24 +786,50 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         socket.emit('subscribe push', subscription);
+        console.log('Native push subscribed');
 
         if (window.webpushr) {
-          window.webpushr('getSID', sid => sid && socket.emit('subscribe webpushr', { sid }));
+          const waitForWebpushr = (timeout = 8000) => {
+            return new Promise((resolve, reject) => {
+              const start = Date.now();
+              const check = () => {
+                if (
+                  window.webpushr &&
+                  typeof window.webpushr === 'function' &&
+                  window.webpushr.q &&
+                  Array.isArray(window.webpushr.q)
+                ) {
+                  resolve();
+                } else if (Date.now() - start > timeout) {
+                  reject(new Error('Webpushr SDK not fully loaded'));
+                } else {
+                  setTimeout(check, 300);
+                }
+              };
+              check();
+            });
+          };
+
+          try {
+            await waitForWebpushr();
+            console.log('Webpushr SDK fully ready');
+            window.webpushr('getSID', (sid) => {
+              if (sid) {
+                console.log('Webpushr SID:', sid);
+                socket.emit('subscribe webpushr', { sid });
+              } else {
+                console.warn('No Webpushr SID - user not subscribed to Webpushr yet');
+              }
+            });
+          } catch (err) {
+            console.warn('Webpushr integration skipped:', err.message);
+          }
+        } else {
+          console.warn('Webpushr SDK not loaded');
         }
       } catch (err) {
         console.error('Push subscription failed:', err);
       }
-    }
-
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-      }
-      return outputArray;
     }
   }
 
@@ -2038,6 +2069,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch(`${API_BASE}/conversations/get/turn-credentials`, {
         headers: apiHeaders(true),
       });
+
+      console.log(res, 'TURN response');
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 

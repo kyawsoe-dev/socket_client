@@ -1,5 +1,6 @@
 const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
 const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
+
 var socket = null;
 let currentUser = null;
 let token = null;
@@ -18,11 +19,13 @@ const receiveSound = new Audio("/assets/audio/receive.mp3");
 const typingSound = new Audio("/assets/audio/typing.mp3");
 const callSound = new Audio("/assets/audio/call.mp3");
 const endSound = new Audio("/assets/audio/end.mp3");
+
 function apiHeaders(withAuth = true) {
   const headers = { "Content-Type": "application/json" };
   if (withAuth && token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
+
 function formatTime(iso) {
   try {
     const date = new Date(iso);
@@ -45,26 +48,31 @@ function formatTime(iso) {
     return "";
   }
 }
+
 function scrollToBottom(chatbox) {
   chatbox.scrollTop = chatbox.scrollHeight;
 }
+
 function showTyping(typingIndicator, text) {
   typingIndicator.textContent = text;
   if (typingTimeout) clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => (typingIndicator.textContent = ""), 2000);
 }
+
 function saveAuth(tk, user) {
   localStorage.setItem("token", tk);
   localStorage.setItem("user", JSON.stringify(user));
   token = tk;
   currentUser = user;
 }
+
 function clearAuth() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   token = null;
   currentUser = null;
 }
+
 function debounce(fn, delay = 300) {
   let timer;
   return (...args) => {
@@ -72,6 +80,7 @@ function debounce(fn, delay = 300) {
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
 document.addEventListener("DOMContentLoaded", async () => {
   const loginTab = document.getElementById("loginTab");
   const registerTab = document.getElementById("registerTab");
@@ -126,7 +135,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const drawerName = document.getElementById("drawerName");
   const drawerUsername = document.getElementById("drawerUsername");
   const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
-  const drawerNewGroup = document.getElementById("drawerNewGroup");
   const suggestedContainer = document.getElementById("suggestedUsersContainer");
   const toggleBtn = document.getElementById("toggleSuggestedBtn");
   if (toggleBtn && suggestedContainer) {
@@ -157,19 +165,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 150);
     });
   }
+
   document.getElementById("openSidebarBtn")?.addEventListener("click", () => {
     document.querySelector(".sidebar").classList.add("active");
     document.getElementById("sidebarOverlay").classList.add("active");
   });
+
   document.getElementById("sidebarOverlay").addEventListener("click", () => {
     document.querySelector(".sidebar").classList.remove("active");
     document.getElementById("sidebarOverlay").classList.remove("active");
   });
+
   document.getElementById("backBtn").addEventListener("click", () => {
     document.querySelector(".chat-panel").classList.remove("active");
     document.querySelector(".sidebar").classList.add("active");
     document.getElementById("sidebarOverlay").classList.add("active");
   });
+
   if (emojiButton && messageInput) {
     try {
       const module = await import(
@@ -189,6 +201,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       emojiButton.style.display = "none";
     }
   }
+
   function showAlert(message, type = "info") {
     Swal.fire({
       icon: type,
@@ -196,32 +209,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       confirmButtonText: "OK",
     });
   }
+
   function showAuthView() {
     authView.style.display = "";
     mainView.style.display = "none";
     groupModal.style.display = "none";
     appTitle.textContent = "KS Chat App — Login";
   }
+
   function showMainView() {
     authView.style.display = "none";
     mainView.style.display = "";
     appTitle.textContent = "KS Chat App";
   }
+
   loginTab.addEventListener("click", () => {
     loginTab.classList.add("active");
     registerTab.classList.remove("active");
     loginForm.classList.remove("hidden");
     registerForm.classList.add("hidden");
   });
+
   registerTab.addEventListener("click", () => {
     registerTab.classList.add("active");
     loginTab.classList.remove("active");
     registerForm.classList.remove("hidden");
     loginForm.classList.add("hidden");
   });
+
   let usernameValid = false;
   let emailValid = false;
   let passwordMatchValid = false;
+
   regUsername.addEventListener(
     "input",
     debounce(async () => {
@@ -233,6 +252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSubmitState();
     }, 500)
   );
+
   regEmail.addEventListener(
     "input",
     debounce(async () => {
@@ -244,6 +264,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSubmitState();
     }, 500)
   );
+
   // Check field availability
   async function checkAvailability(field, value, msgElem) {
     if (!value) {
@@ -255,6 +276,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch(
         `${API_BASE}/auth/check?field=${field}&value=${encodeURIComponent(value)}`
       );
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+        throw new Error("Availability check failed");
+      }
       const data = await res.json();
       const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1);
       if (data.available) {
@@ -293,11 +322,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     updateSubmitState();
   }
+
   regPassword.addEventListener("input", checkPasswords);
   regConfirm.addEventListener("input", checkPasswords);
   function updateSubmitState() {
     submitBtn.disabled = !(usernameValid && emailValid && passwordMatchValid);
   }
+
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!(usernameValid && emailValid && passwordMatchValid)) {
@@ -363,11 +394,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       loginBtn.textContent = originalText;
     }
   });
+
   logoutBtn?.addEventListener("click", () => {
     if (socket) socket.disconnect();
     clearAuth();
     showAuthView();
   });
+
   function showConversationList() {
     const sidebar = document.querySelector(".sidebar");
     const chatPanel = document.querySelector(".chat-panel");
@@ -384,12 +417,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     document.querySelector('.chat-input').classList.add('hidden');
   }
+
   function showChatPanel() {
     document.querySelector(".sidebar").style.display = "none";
     document.querySelector(".chat-panel").classList.add("active");
     backBtn.style.display = "inline-flex";
     history.pushState({ chatOpen: true }, "");
   }
+
   backBtn?.addEventListener("click", () => {
     showConversationList();
     currentConversation = null;
@@ -404,6 +439,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (typingIndicator) typingIndicator.textContent = "";
     history.back();
   });
+
   // Handle browser back button
   window.addEventListener('popstate', (event) => {
     if (document.querySelector(".chat-panel").classList.contains("active")) {
@@ -412,6 +448,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       history.pushState({ chatOpen: true }, "");
     }
   });
+
   const header = document.querySelector(".chat-header-title");
   if (header) {
     header.addEventListener("click", () => {
@@ -421,12 +458,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
   function connectSocket() {
     if (!token) return;
     socket = io(SOCKET_URL, { auth: { token } });
-    socket.on("connect", () => {
+    socket.on("connect", async () => {
       console.log("socket connected", socket.id);
       appendSystemMessage("Connected to server");
+      try {
+        const res = await fetch(`${API_BASE}/notifications/unread/count`, {
+          headers: apiHeaders(true),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          updateBadge(data.count);
+        } else if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+      } catch (err) {
+        console.error("Failed to fetch unread count:", err);
+      }
     });
     socket.on("disconnect", () => {
       console.log("socket disconnected");
@@ -523,6 +576,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       showAlert("Call rejected");
       endCall();
     });
+    // notification
+    socket?.on("notification", (notif) => {
+      addNotification(notif);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: notif.title,
+        text: notif.body,
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+      });
+    });
+    // Unread count update
+    socket?.on("unread count", (count) => {
+      updateBadge(count);
+    });
   }
   async function handleUserOffline(userId) {
     if (currentConversation && !currentConversation.isGroup) {
@@ -535,6 +606,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (res.ok) {
             const fullUser = await res.json();
             lastActiveMap.set(userId, fullUser.lastActive);
+          } else if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
           }
         } catch (err) {
           console.error("Failed to fetch last active:", err);
@@ -542,12 +617,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
+
   function updateOnlineStatuses() {
     document.querySelectorAll("[data-userid]").forEach((el) => {
       const userId = Number(el.dataset.userid);
       el.classList.toggle("online", onlineUsers.has(userId));
     });
   }
+
   function updateConvStatus() {
     if (!currentConversation || !convCount) return;
     if (currentConversation.isGroup) {
@@ -571,6 +648,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
+
   function updateGroupCounters(conv) {
     if (convCount) {
       const total = conv.members.length;
@@ -582,6 +660,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       groupInfoCount.textContent = `${total} member${total > 1 ? 's' : ''}`;
     }
   }
+
   function appendSystemMessage(text) {
     const el = document.createElement("div");
     el.className = "system";
@@ -589,6 +668,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     chatbox.appendChild(el);
     scrollToBottom(chatbox);
   }
+
   async function initAfterAuth() {
     const user = JSON.parse(localStorage.getItem("user")) || null;
     if (!token || !user) return;
@@ -610,8 +690,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     connectSocket();
     await loadConversations();
     await loadSuggestedUsers();
-    await subscribeToPush();
     await getIceServers();
+    try {
+      const res = await fetch(`${API_BASE}/notifications/unread/count`, { headers: apiHeaders(true) });
+      if (res.ok) {
+        const { count } = await res.json();
+        updateBadge(count);
+      } else if (res.status === 401) {
+        clearAuth();
+        showAuthView();
+        showAlert("Session expired. Please log in again.", "warning");
+      }
+    } catch (err) {
+      console.error("Initial notification count failed:", err);
+    }
     if (!conversations || conversations.length === 0) {
       document.querySelector('.chat-input')?.classList.add('hidden');
       showConversationList();
@@ -637,110 +729,153 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       console.log("Drawer elements not found, skipping drawer initialization");
     }
-    if ('Notification' in window && navigator.serviceWorker) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          subscribeToPush();
-        } else if (permission === 'denied') {
-          console.log('Push notifications denied');
-        } else {
-          console.log('Push permission default');
-        }
-      }).catch(err => console.error('Permission request error:', err));
-    }
-    function urlBase64ToUint8Array(base64String) {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-    }
-    async function subscribeToPush() {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const vapidRes = await fetch(`${API_BASE}/auth/vapid-public-key`);
-        if (!vapidRes.ok) {
-          throw new Error(`VAPID key fetch failed: ${vapidRes.status}`);
-        }
-        const data = await vapidRes.json();
-        const publicKey = data.publicKey?.trim();
-        if (!publicKey || publicKey.includes('Error')) {
-          throw new Error('Invalid VAPID key received');
-        }
-        let subscription;
-        try {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey)
-          });
-        } catch (err) {
-          if (err.name === 'InvalidStateError' && err.message.includes('different applicationServerKey')) {
-            const existingSub = await registration.pushManager.getSubscription();
-            if (existingSub) {
-              await existingSub.unsubscribe();
-              console.log('Unsubscribed from old push subscription');
-            }
-            subscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(publicKey)
-            });
-          } else {
-            throw err;
-          }
-        }
-        socket.emit('subscribe push', subscription);
-        console.log('Native push subscribed');
-        if (window.webpushr) {
-          const waitForWebpushr = (timeout = 15000) => {
-            return new Promise((resolve, reject) => {
-              const start = Date.now();
-              const check = () => {
-                if (
-                  window.webpushr &&
-                  typeof window.webpushr === 'function' &&
-                  window.webpushr.q &&
-                  Array.isArray(window.webpushr.q)
-                ) {
-                  resolve();
-                } else if (Date.now() - start > timeout) {
-                  reject(new Error('Webpushr SDK not fully loaded'));
-                } else {
-                  setTimeout(check, 300);
-                }
-              };
-              check();
-            });
-          };
-          try {
-            await waitForWebpushr();
-            console.log('Webpushr SDK fully ready');
-            window.webpushr('getSID', (sid) => {
-              if (sid) {
-                console.log('Webpushr SID:', sid);
-                socket.emit('subscribe webpushr', { sid });
-              } else {
-                console.warn('No Webpushr SID - user not subscribed to Webpushr yet');
-              }
-            });
-          } catch (err) {
-            console.warn('Webpushr integration skipped:', err.message);
-          }
-        } else {
-          console.warn('Webpushr SDK not loaded');
-        }
-      } catch (err) {
-        console.error('Push subscription failed:', err);
+  }
+
+  // NOTIFICATION SYSTEM
+  let unreadCount = 0;
+  const notificationBell = document.getElementById("notificationBell");
+  const notificationBadge = document.getElementById("notificationBadge");
+  const notificationDropdown = document.getElementById("notificationDropdown");
+  const notificationList = document.getElementById("notificationList");
+  const markAllReadBtn = document.getElementById("markAllReadBtn");
+
+  function updateBadge(count) {
+    unreadCount = count;
+    notificationBadge.textContent = count > 99 ? "99+" : count;
+    notificationBadge.style.display = count > 0 ? "flex" : "none";
+  }
+
+  function addNotification(notif) {
+    const li = document.createElement("li");
+    li.className = `notification-item ${!notif.read ? "unread" : ""}`;
+    li.dataset.id = notif.id;
+
+    const time = formatTime(notif.timestamp || notif.createdAt);
+
+    const senderName = notif.title?.split(" sent a message")[0] || "U";
+    const avatarLetter = senderName.trim().charAt(0).toUpperCase();
+
+    li.innerHTML = `
+    <div class="notification-content">
+      <div class="notification-avatar">${avatarLetter}</div>
+      <div class="notification-text">
+        <div class="notification-title">${notif.title}</div>
+        <div class="notification-body">${notif.body || ""}</div>
+        <div class="notification-time">${time}</div>
+      </div>
+    </div>
+  `;
+
+    li.addEventListener("click", async () => {
+      if (!notif.read) {
+        await markAsRead(notif.id);
+        li.classList.remove("unread");
       }
+      closeNotificationDropdown();
+    });
+
+    notificationList.prepend(li);
+  }
+
+  async function markAsRead(id) {
+    try {
+      const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+        method: "POST",
+        headers: apiHeaders(true),
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+      }
+      unreadCount = Math.max(0, unreadCount - 1);
+      updateBadge(unreadCount);
+    } catch (err) {
+      console.error("Mark read failed:", err);
     }
   }
+
+  async function markAllAsRead() {
+    try {
+      const res = await fetch(`${API_BASE}/notifications/read-all`, {
+        method: "POST",
+        headers: apiHeaders(true),
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+      }
+      document.querySelectorAll(".notification-item.unread").forEach(el => {
+        el.classList.remove("unread");
+      });
+      updateBadge(0);
+    } catch (err) {
+      console.error("Mark all read failed:", err);
+    }
+  }
+
+  function openNotificationDropdown() {
+    notificationDropdown.style.display = "flex";
+    loadNotifications();
+  }
+
+  function closeNotificationDropdown() {
+    notificationDropdown.style.display = "none";
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!notificationBell.contains(e.target) && !notificationDropdown.contains(e.target)) {
+      closeNotificationDropdown();
+    }
+  });
+
+  notificationBell?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (notificationDropdown.style.display === "flex") {
+      closeNotificationDropdown();
+    } else {
+      openNotificationDropdown();
+    }
+  });
+
+  markAllReadBtn?.addEventListener("click", markAllAsRead);
+  async function loadNotifications() {
+    try {
+      const res = await fetch(`${API_BASE}/notifications`, {
+        headers: apiHeaders(true),
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+        return;
+      }
+      const notifs = await res.json();
+      notificationList.innerHTML = "";
+      notifs.forEach(addNotification);
+    } catch (err) {
+      console.error("Load notifications failed:", err);
+    }
+  }
+
   messageForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     sendMessage();
   });
+
   messageInput?.addEventListener("input", emitTyping);
   function emitTyping() {
     if (!socket?.connected || !currentConversation) return;
     socket.emit("typing", { conversationId: currentConversation.id });
   }
+
   async function sendMessage() {
     if (!currentConversation)
       return showAlert("Select a conversation first", "warning");
@@ -784,6 +919,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             body: JSON.stringify({ content: text, type: "TEXT", metadata: {} }),
           }
         );
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
+          }
+        }
         const saved = await res.json();
         if (res.ok) {
           replaceOptimisticMessage(optimisticId, saved);
@@ -885,6 +1027,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             headers: apiHeaders(true),
             body: JSON.stringify({ content: newContent }),
           });
+          if (!res.ok) {
+            if (res.status === 401) {
+              clearAuth();
+              showAuthView();
+              showAlert("Session expired. Please log in again.", "warning");
+            }
+          }
           if (res.ok) {
             textEl.textContent = newContent;
           } else {
@@ -936,7 +1085,13 @@ document.addEventListener("DOMContentLoaded", async () => {
               if (res.ok) {
                 updateDeletedMessage(msgEl);
               } else {
-                showAlert("Delete failed", "error");
+                if (res.status === 401) {
+                  clearAuth();
+                  showAuthView();
+                  showAlert("Session expired. Please log in again.", "warning");
+                } else {
+                  showAlert("Delete failed", "error");
+                }
               }
             })
             .catch(() => showAlert("Delete failed", "error"));
@@ -967,6 +1122,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (msg.senderId !== currentUser.id) {
       receiveSound.currentTime = 0;
       receiveSound.play().catch(() => { });
+      if (
+        !currentConversation ||
+        currentConversation.id !== msg.conversationId
+      ) {
+        unreadCount++;
+        updateBadge(unreadCount);
+      }
+      if (
+        currentConversation &&
+        currentConversation.id &&
+        currentConversation.id !== msg.conversationId
+      ) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'New Message',
+          text: `From ${msg.senderId}: ${msg.content.slice(0, 30)}${msg.content.length > 30 ? '...' : ''}`,
+          showConfirmButton: false,
+          timer: 3000
+        });
+      }
     }
     updateConversationPreview(msg.conversationId, msg);
     scrollToBottom(chatbox);
@@ -994,7 +1171,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           headers: apiHeaders(true),
         }
       );
-      if (!res.ok) throw new Error("Failed to load conversations");
+      if (!res.ok) {
+        if (res.status === 401) {
+          showAlert("Session expired. Please log in again.", "warning");
+          clearAuth();
+          showAuthView();
+          return [];
+        } else {
+          showAlert("Could not load conversations", "error");
+          return [];
+        }
+      }
       const data = await res.json();
       const convs = data.data || data;
       totalConvPages = data.totalPages || 1;
@@ -1112,6 +1299,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           const res = await fetch(`${API_BASE}/conversations/users/${other.user.id}`, {
             headers: apiHeaders(true),
           });
+          if (!res.ok) {
+            if (res.status === 401) {
+              clearAuth();
+              showAuthView();
+              showAlert("Session expired. Please log in again.", "warning");
+            }
+          }
           if (res.ok) {
             const fullUser = await res.json();
             lastActiveMap.set(other.user.id, fullUser.data.lastActive);
@@ -1132,7 +1326,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch(`${API_BASE}/conversations/${id}`, {
         headers: apiHeaders(true),
       });
-      if (!res.ok) throw new Error("Failed to refresh conversation");
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+        throw new Error("Failed to refresh conversation");
+      }
       const updated = await res.json();
       const index = conversations.findIndex((c) => c.id === id);
       if (index > -1) conversations[index] = updated;
@@ -1140,7 +1341,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderConversations();
       openGroupInfo(updated);
       if (currentConversation?.id === updated.id) {
-        updateGroupCounters(updated);
+        updateGroupCounters(currentConversation);
       }
     } catch (err) {
       console.error("refreshConversation", err);
@@ -1181,7 +1382,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           },
           body: JSON.stringify({ title: newTitle }),
         });
-        if (!res.ok) throw new Error("Failed to update group title");
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
+          }
+          throw new Error("Failed to update group title");
+        }
         const data = await res.json();
         updateGroupTitleEverywhere(data.group.title);
         showAlert("Group title updated", "success");
@@ -1250,7 +1458,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 updateGroupCounters(currentConversation);
               }
             } else {
-              Swal.fire({ title: "Error", text: "Failed to remove member.", icon: "error" });
+              if (res.status === 401) {
+                clearAuth();
+                showAuthView();
+                showAlert("Session expired. Please log in again.", "warning");
+              } else {
+                Swal.fire({ title: "Error", text: "Failed to remove member.", icon: "error" });
+              }
             }
           } catch (err) {
             console.error(err);
@@ -1279,7 +1493,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch(`${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`, {
           headers: apiHeaders(true),
         });
-        if (!res.ok) throw new Error("Search failed");
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
+          }
+          throw new Error("Search failed");
+        }
         const users = await res.json();
         const currentIds = currentConversation.members.map(m => m.user.id);
         const filtered = users.users.filter(u => !currentIds.includes(u.id));
@@ -1326,6 +1547,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       let errorMsg = "Could not add member";
       if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
         let detail = "";
         try { const err = await res.json(); detail = err.error || ""; } catch { detail = await res.text(); }
         switch (res.status) {
@@ -1404,6 +1630,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       loadingAlert.close();
       if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
         let errorMessage = "Could not create chat";
         try {
           const errorData = await res.json();
@@ -1475,7 +1706,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       url.searchParams.set("limit", limit);
       if (cursor) url.searchParams.set("cursor", cursor);
       const res = await fetch(url.toString(), { headers: apiHeaders(true) });
-      if (!res.ok) throw new Error("Failed to fetch messages");
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+        throw new Error("Failed to fetch messages");
+      }
       const msgs = await res.json();
       receivedMessages.clear();
       msgs.forEach((m) => appendMessageToChat(m));
@@ -1498,7 +1736,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           `${API_BASE}/conversations/users/search?query=${encodeURIComponent(query)}`,
           { headers: apiHeaders(true) }
         );
-        if (!res.ok) throw new Error("Search failed");
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
+          }
+          throw new Error("Search failed");
+        }
         const data = await res.json();
         searchedUsersList.innerHTML = "";
         data.users.forEach((user) => {
@@ -1582,7 +1827,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             headers: apiHeaders(true),
           }
         );
-        if (!res.ok) throw new Error("Group member search failed");
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearAuth();
+            showAuthView();
+            showAlert("Session expired. Please log in again.", "warning");
+          }
+          throw new Error("Group member search failed");
+        }
         const users = await res.json();
         groupMembersList.innerHTML = "";
         users.users.forEach((user) => {
@@ -1647,8 +1899,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: apiHeaders(true),
         body: JSON.stringify({ title, memberIds }),
       });
-      if (!res.ok)
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
         throw new Error((await res.json()).message || "Create group failed");
+      }
       const group = await res.json();
       groupModal.style.display = "none";
       groupTitle.value = "";
@@ -1669,7 +1927,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetch(`${API_BASE}/conversations/users/suggested`, {
         headers: apiHeaders(true),
       });
-      if (!res.ok) throw new Error("Failed to fetch suggested users");
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAuth();
+          showAuthView();
+          showAlert("Session expired. Please log in again.", "warning");
+        }
+        throw new Error("Failed to fetch suggested users");
+      }
       const users = await res.json();
       const existingUserIds = conversations.flatMap((c) =>
         c.members.map((m) => m.user.id)
@@ -1708,11 +1973,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (token && storedUser) {
     try {
       currentUser = JSON.parse(storedUser);
-      await initAfterAuth();
-    } catch {
+    } catch (e) {
+      console.error('Invalid user data:', e);
       clearAuth();
       showAuthView();
+      return;
     }
+    initAfterAuth().catch(err => {
+      console.error('Initialization error:', err);
+      showAlert('Failed to load app data. Please check your connection and try again.', 'error');
+      // Do not automatically log out on non-auth errors
+    });
   } else showAuthView();
   let originalHeight = window.innerHeight;
   window.addEventListener('resize', () => {
@@ -1779,44 +2050,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-  async function createOffer(toUserId, isGroup = false) {
-    const pc = await createPeerConnection(toUserId);
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    if (isGroup) {
-      socket.emit('webrtc:group-offer', { conversationId: currentCallConvId, toUserId, offer, type: currentCallType });
-    } else {
-      socket.emit('webrtc:offer', { toUserId, offer, type: currentCallType });
-    }
-  }
+  // Google Public STUN
+  const STUN = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+  ];
   async function getIceServers() {
-    if (cachedIceServers) return cachedIceServers;
-    try {
-      const res = await fetch(`${API_BASE}/conversations/get/turn-credentials`, {
-        headers: apiHeaders(true),
-      });
-      console.log(res, 'TURN response');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      let iceServersRaw = data?.data?.iceServers ?? data?.iceServers ?? [];
-      if (!Array.isArray(iceServersRaw)) {
-        iceServersRaw = [iceServersRaw];
-      }
-      if (!iceServersRaw.length) {
-        console.log('No ICE servers returned, using minimal STUN fallback');
-        iceServersRaw = [{ urls: 'stun:stun.l.google.com:19302' }];
-      }
-      cachedIceServers = iceServersRaw;
-      if (data?.data?.expirySeconds) {
-        const refreshMs = (data.data.expirySeconds - 300) * 1000;
-        setTimeout(() => { cachedIceServers = null; }, refreshMs);
-      }
-      return cachedIceServers;
-    } catch (err) {
-      console.log('TURN fetch failed - using minimal STUN fallback', err);
-      cachedIceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-      return cachedIceServers;
-    }
+    return STUN;
   }
   async function createPeerConnection(userId) {
     const iceServers = await getIceServers();
@@ -1856,6 +2099,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     return pc;
   }
+
+  async function createOffer(toUserId, isGroup = false) {
+    const pc = await createPeerConnection(toUserId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    if (isGroup) {
+      socket.emit('webrtc:group-offer', { conversationId: currentCallConvId, toUserId, offer, type: currentCallType });
+    } else {
+      socket.emit('webrtc:offer', { toUserId, offer, type: currentCallType });
+    }
+  }
+
   async function handleOffer({ fromUserId, offer, conversationId, isGroup, type }) {
     currentCallType = type;
     const pc = await createPeerConnection(fromUserId);
@@ -1868,6 +2123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       socket.emit('webrtc:answer', { toUserId: fromUserId, answer });
     }
   }
+
   async function handleAnswer({ fromUserId, answer }) {
     const pc = peerConnections.get(fromUserId);
     if (pc) {
@@ -1878,6 +2134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
+
   async function handleCandidate({ fromUserId, candidate }) {
     const pc = peerConnections.get(fromUserId);
     if (pc) {
@@ -1888,6 +2145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
+
   async function acceptCall() {
     incomingCallModal.style.display = 'none';
     const data = window.incomingCallData;
@@ -1916,22 +2174,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       handleOffer({ fromUserId: data.fromUserId, offer: data.offer, type: data.type });
     }
   }
+
   function rejectCall() {
     incomingCallModal.style.display = 'none';
     const data = window.incomingCallData;
     socket.emit('callRejected', { toUserId: data.fromUserId, from: currentUser.id });
   }
+
   function toggleAudio() {
     isAudioEnabled = !isAudioEnabled;
     localStream.getAudioTracks()[0].enabled = isAudioEnabled;
     toggleAudioBtn.classList.toggle('off', !isAudioEnabled);
   }
+
   function toggleVideo() {
     if (currentCallType !== 'video') return;
     isVideoEnabled = !isVideoEnabled;
     localStream.getVideoTracks()[0].enabled = isVideoEnabled;
     toggleVideoBtn.classList.toggle('off', !isVideoEnabled);
   }
+
   function endCall() {
     peerConnections.forEach((pc, userId) => {
       pc.close();
@@ -1952,6 +2214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentCallConvId = null;
     endSound.play().catch(err => console.error('End sound error:', err));
   }
+
   function endCallForPeer(userId) {
     const pc = peerConnections.get(userId);
     if (pc) {
@@ -1965,6 +2228,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 });
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker

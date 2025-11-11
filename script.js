@@ -586,8 +586,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         title: notif.title,
         text: notif.body,
         showConfirmButton: false,
-        timer: 4000,
-        timerProgressBar: true,
+        timer: 4000
       });
     });
     // Unread count update

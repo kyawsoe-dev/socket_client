@@ -858,9 +858,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       const notifs = await res.json();
       notificationList.innerHTML = "";
+      if (!notifs || notifs.length === 0) {
+        notificationList.innerHTML = `
+        <li class="no-notifications">
+          <span>No notifications</span>
+        </li>
+      `;
+        return;
+      }
       notifs.forEach(addNotification);
     } catch (err) {
       console.error("Load notifications failed:", err);
+      notificationList.innerHTML = `
+      <li class="no-notifications error">
+        <span>Failed to load notifications</span>
+      </li>
+    `;
     }
   }
 

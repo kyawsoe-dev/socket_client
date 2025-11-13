@@ -2179,6 +2179,17 @@ body {
   margin-top: 6px;
 }
 
+.notification-list .no-notifications {
+  text-align: center;
+  color: #888;
+  padding: 60px 0;
+  font-size: 14px;
+}
+
+.notification-list .no-notifications.error {
+  color: #e74c3c;
+}
+
 .small-btn {
   background: none;
   border: none;

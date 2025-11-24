@@ -733,6 +733,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // NOTIFICATION SYSTEM
   let unreadCount = 0;
   const notificationBell = document.getElementById("notificationBell");
+  const drawerNotificationBell = document.getElementById("drawerNotificationBell");
   const notificationBadge = document.getElementById("notificationBadge");
   const notificationDropdown = document.getElementById("notificationDropdown");
   const notificationList = document.getElementById("notificationList");
@@ -835,6 +836,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   notificationBell?.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (notificationDropdown.style.display === "flex") {
+      closeNotificationDropdown();
+    } else {
+      openNotificationDropdown();
+    }
+  });
+
+
+  drawerNotificationBell?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    meDrawer?.classList.remove("open"); 
+    drawerOverlay?.classList.remove("open");
+
     if (notificationDropdown.style.display === "flex") {
       closeNotificationDropdown();
     } else {

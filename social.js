@@ -161,6 +161,45 @@ async function createPost() {
     }
 }
 
+// Drawer
+const userAvatar = document.getElementById("userAvatar");
+const rightSidebar = document.getElementById("rightSidebar");
+const closeSidebar = document.getElementById("closeSidebar");
+const signOutBtn = document.getElementById("signOutBtn");
+
+const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+if (user && user.displayName) {
+    const drawerAvatar = document.getElementById("drawerAvatar");
+    const drawerDisplayName = document.getElementById("drawerDisplayName");
+    const drawerUsername = document.getElementById("drawerUsername");
+    const drawerEmail = document.getElementById("drawerEmail");
+
+    drawerAvatar.textContent = user.displayName[0];
+    drawerDisplayName.textContent = user.displayName;
+    drawerUsername.textContent = `@${user.username}`;
+    drawerEmail.textContent = user.email;
+}
+
+// Open sidebar
+userAvatar.addEventListener("click", () => {
+    rightSidebar.classList.add("active");
+});
+
+// Close sidebar
+closeSidebar.addEventListener("click", () => {
+    rightSidebar.classList.remove("active");
+});
+
+// Sign out
+signOutBtn.addEventListener("click", () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/index.html";
+});
+
+
+
 // Load posts
 let isLoading = false;
 let hasMore = true;
@@ -667,7 +706,7 @@ document.getElementById("storyViewer").addEventListener("mouseup", () => {
     clearTimeout(holdTimer);
     startProgress();
 });
-document.getElementById("storyViewer").addEventListener("touchstart", (e) => e.preventDefault());
+
 
 window.prevStory = function () {
     let changed = false;

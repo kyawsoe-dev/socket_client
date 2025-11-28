@@ -22,6 +22,78 @@ body {
   min-height: 100vh;
 }
 
+/* Sidebar styling */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px; /* hidden initially */
+  width: 300px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.sidebar.active {
+  right: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.user-info .avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #0088cc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-right: 15px;
+}
+
+.user-details p {
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.signout-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 40px;
+  width: 100%;
+}
+
+/* Topbar */
 .topbar {
   position: sticky;
   top: 0;

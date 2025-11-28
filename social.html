@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>KS Social App</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <link rel="stylesheet" href="social.css" />
+  <link rel="manifest" href="/manifest.json" />
+</head>
+
+<body>
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="avatar-container">
+      <div class="avatar" id="userAvatar">U</div>
+    </div>
+    <div class="actions">
+      <!-- Search -->
+      <input type="text" class="active" id="postSearchInput" placeholder="Search posts..." />
+
+      <button id="toggleSearchBtn" class="icon-btn" title="Search">
+        <i class="fas fa-search"></i>
+      </button>
+
+      <button id="addStoryBtn" class="icon-btn" title="Add Story">
+        <i class="fas fa-plus-circle"></i>
+      </button>
+      <button id="goMessenger" class="icon-btn messenger" title="Messenger">
+        <i class="fas fa-comment-dots"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Stories Bar -->
+    <section id="storiesBar" class="stories-bar"></section>
+
+    <!-- Create Post -->
+    <section class="create-post-card">
+      <textarea id="postText" placeholder="What's on your mind?"></textarea>
+      <input type="text" id="mediaUrl" placeholder="Paste image/video URL (optional)" style="
+            width: 100%;
+            box-sizing: border-box;
+            margin: 12px 0;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+          " />
+
+      <div id="mediaPreview" class="media-preview"></div>
+      <div class="post-actions-bar">
+        <button id="submitPost" class="post-btn">Post</button>
+      </div>
+    </section>
+
+    <!-- Posts Feed -->
+    <section id="postsFeed" class="feed"></section>
+  </main>
+
+  <!-- Image Modal -->
+  <div id="imageModal" class="modal">
+    <img id="modalImage" src="" alt="Full view" />
+  </div>
+
+  <!-- Story Viewer -->
+  <div id="storyViewer" class="modal story-viewer">
+    <div class="story-content">
+      <div class="story-progress-container">
+        <div class="story-progress-bar"></div>
+      </div>
+      <button class="story-close" onclick="closeStoryViewer()">×</button>
+      <button class="story-nav left" onclick="prevStory()">&lt;</button>
+      <button class="story-nav right" onclick="nextStory()">&gt;</button>
+      <div class="story-header">
+        <div id="storyAuthorAvatar" class="story-letter-avatar"></div>
+        <div class="story-info">
+          <span id="storyAuthorName"></span>
+          <span id="storyTime"></span>
+        </div>
+      </div>
+      <div id="storyMedia"></div>
+      <div id="storyText" class="story-caption"></div>
+    </div>
+  </div>
+
+  <!-- Add Story Modal -->
+  <div id="addStoryModal" class="modal">
+    <div class="modal-content" style="width: 500px; max-width: 95%">
+      <h3>Add to Your Story</h3>
+      <input type="text" id="storyTextInput" placeholder="Add text (optional)" style="
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+          " />
+      <input type="text" id="storyMediaUrl" placeholder="Image/Video URL" style="
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+          " />
+      <div id="storyMediaPreview" class="media-preview"></div>
+      <div class="edit-actions">
+        <button onclick="closeAddStory()">Cancel</button>
+        <button onclick="createStory()" class="post-btn">
+          Share to Story
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Post Modal -->
+  <div id="editModal" class="modal edit-modal">
+    <div class="modal-content">
+      <h3>Edit Post</h3>
+      <textarea id="editText" placeholder="What's on your mind?"></textarea>
+      <input type="text" id="editMediaUrl" placeholder="Paste image/video URL (optional)" style="
+            margin: 12px 0;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+          " />
+      <div id="editMediaPreview" class="media-preview"></div>
+      <div class="edit-actions">
+        <button onclick="closeEditModal()" class="close-modal">Cancel</button>
+        <button onclick="saveEdit()" class="post-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Comment Modal -->
+  <div id="editCommentModal" class="modal edit-modal">
+    <div class="modal-content">
+      <h3>Edit Comment</h3>
+      <textarea id="editCommentText" placeholder="Edit your comment..."></textarea>
+      <div class="edit-actions">
+        <button onclick="closeEditCommentModal()" class="close-modal">
+          Cancel
+        </button>
+        <button onclick="saveCommentEdit()" class="post-btn">Save</button>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="social.js"></script>
+</body>
+
+</html>

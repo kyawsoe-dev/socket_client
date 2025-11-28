@@ -846,7 +846,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   drawerNotificationBell?.addEventListener("click", (e) => {
     e.stopPropagation();
-    meDrawer?.classList.remove("open"); 
+    meDrawer?.classList.remove("open");
     drawerOverlay?.classList.remove("open");
 
     if (notificationDropdown.style.display === "flex") {

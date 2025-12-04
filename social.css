@@ -22,22 +22,22 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar styling */
+/* Sidebar */
 .sidebar {
   position: fixed;
   top: 0;
-  right: -300px; /* hidden initially */
+  left: -300px;
   width: 300px;
   height: 100%;
   background-color: #fff;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
-  transition: right 0.3s ease;
+  transition: left 0.2s ease;
   z-index: 1000;
   padding: 20px;
 }
 
 .sidebar.active {
-  right: 0;
+  left: 0;
 }
 
 .close-btn {
@@ -78,7 +78,6 @@ body {
 .sidebar-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
 .signout-btn {
@@ -166,9 +165,11 @@ body {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .icon-btn:hover {
   background: #d8dadf;
 }
+
 .messenger {
   background: var(--success) !important;
   color: white;
@@ -185,6 +186,19 @@ body {
   justify-content: center;
   font-weight: bold;
   font-size: 18px;
+  position: relative;
+}
+
+.avatar::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: #4caf50;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }
 
 .avatar-container {
@@ -197,6 +211,13 @@ body {
   max-width: 600px;
   margin: 20px auto;
   padding: 0 16px;
+}
+
+.display-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  transition: opacity 0.1s;
 }
 
 .create-post-card {
@@ -264,7 +285,7 @@ body {
 .edit-actions {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  text-align: center;
 }
 
 .media-btn {
@@ -337,6 +358,19 @@ body {
   justify-content: center;
   font-weight: bold;
   font-size: 18px;
+  position: relative;
+}
+
+.post-avatar::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: #4caf50;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }
 
 .post-author-name {
@@ -355,10 +389,26 @@ body {
   word-break: break-word;
 }
 
-.post-media img {
-  width: 100%;
-  cursor: pointer;
-  display: block;
+.post-media.grid {
+  display: grid;
+  gap: 4px;
+}
+
+.post-media.grid .grid-item:nth-child(2) {
+  grid-column: span 1;
+}
+.post-media.grid {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.post-media.grid .grid-item img {
+  object-fit: cover;
+  height: 150px;
+}
+
+.post-media.single img {
+  max-height: 500px;
+  object-fit: cover;
 }
 
 .post-actions {
@@ -470,6 +520,7 @@ body {
   max-height: 85vh;
   border-radius: 12px;
 }
+
 .close-modal,
 .edit-actions button {
   margin-top: 16px;
@@ -477,9 +528,6 @@ body {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-}
-.close-modal {
-  background: white;
 }
 
 /* Stories Bar */
@@ -521,7 +569,7 @@ body {
   border: 3px solid white;
 }
 
-/* Skeleton Loading */
+/* Skeleton */
 .post-skeleton {
   background: #fff;
   border-radius: 12px;
@@ -609,7 +657,6 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.3);
   z-index: 11;
   display: flex;
   gap: 2px;
@@ -807,6 +854,7 @@ body {
   margin-top: 12px;
   position: relative;
 }
+
 .comment-avatar {
   width: 32px;
   height: 32px;
@@ -818,7 +866,21 @@ body {
   justify-content: center;
   font-weight: bold;
   flex-shrink: 0;
+  position: relative;
 }
+
+.comment-avatar::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #4caf50;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
 .comment-body {
   flex: 1;
   background: #f0f2f5;

@@ -5,7 +5,7 @@ const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 if (!token || !currentUser.id) {
     window.location.href = "/index.html";
 }
-
+const sendSound = new Audio("/assets/audio/send.mp3");
 let editingPostId = null;
 let storyGroups = [];
 let currentGroupIndex = -1;
@@ -13,7 +13,12 @@ let currentStoryIndex = -1;
 
 document.addEventListener("DOMContentLoaded", () => {
     const avatarEl = document.getElementById("userAvatar");
-    avatarEl.textContent = (currentUser.displayName || currentUser.username || "U")[0].toUpperCase();
+    const displayNameEl = document.getElementById("userDisplayName");
+
+    const userInitial = (currentUser.displayName || currentUser.username || "U")[0].toUpperCase();
+    avatarEl.textContent = userInitial;
+    displayNameEl.textContent = currentUser.displayName || currentUser.username || "User";
+
 
     document.getElementById("goMessenger").onclick = () => {
         window.location.href = "/index.html";
@@ -29,34 +34,47 @@ document.addEventListener("DOMContentLoaded", () => {
         searchInput.classList.toggle("active");
         if (searchInput.classList.contains("active")) {
             searchInput.focus();
+            displayNameEl.style.display = "none";
         } else {
             searchInput.value = "";
-            loadPosts();
+            displayNameEl.style.display = "inline";
+            loadPosts("", true);
         }
     };
 
-    function debounce(func, delay) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
+    searchInput.addEventListener("focus", () => {
+        displayNameEl.style.display = "none";
+    });
 
-    const handleSearch = debounce(() => {
-        loadPosts(searchInput.value.trim());
-    }, 500);
+    searchInput.addEventListener("blur", () => {
+        if (!searchInput.classList.contains("active")) {
+            displayNameEl.style.display = "inline";
+        }
+    });
 
-    searchInput.addEventListener("input", handleSearch);
+    let typingTimer;
+    const typingDelay = 500;
 
-    // Close image modal
+    searchInput.addEventListener("input", () => {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            loadPosts(searchInput.value.trim(), true);
+        }, typingDelay);
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            clearTimeout(typingTimer);
+            loadPosts(searchInput.value.trim(), true);
+        }
+    });
+
     document.getElementById("imageModal").onclick = (e) => {
         if (e.target === document.getElementById("imageModal") || e.target.classList.contains("close-modal")) {
             document.getElementById("imageModal").classList.remove("active");
         }
     };
 
-    // Story viewer close
     document.getElementById("storyViewer").onclick = (e) => {
         if (e.target === document.getElementById("storyViewer")) {
             closeStoryViewer();
@@ -128,6 +146,7 @@ document.getElementById("storyMediaUrl").oninput = (e) => {
     }
 };
 
+
 async function createPost() {
     const content = document.getElementById("postText").value.trim();
     const media = document.getElementById("mediaUrl").value.trim();
@@ -151,6 +170,10 @@ async function createPost() {
             document.getElementById("mediaUrl").value = "";
             document.getElementById("mediaPreview").innerHTML = "";
             loadPosts();
+
+            sendSound.currentTime = 0;
+            sendSound.play().catch(() => { });
+
             Swal.fire("Success", "Posted!", "success");
         } else {
             const err = await res.json();
@@ -287,19 +310,43 @@ function renderPost(post) {
     const name = author.displayName || author.username;
     const isOwnPost = author.id === currentUser.id;
     const hasLiked = post.likes?.some(l => l.userId === currentUser.id);
-    const mediaHtml = post.media ? `
-        <div class="post-media">
-            <img src="${post.media}" alt="Post media" onclick="openImage('${post.media}')" style="width:100%; cursor:pointer; border-radius:8px;" loading="lazy">
-        </div>` : "";
+
+    // Normalize media into array
+    let mediaUrls = [];
+    if (Array.isArray(post.media)) {
+        mediaUrls = post.media;
+    } else if (typeof post.media === "string" && post.media.trim() !== "") {
+        mediaUrls = [post.media];
+    }
+
+    // Media layout
+    let mediaHtml = "";
+    if (mediaUrls.length === 1) {
+        mediaHtml = `<div class="post-media single">
+            <img src="${mediaUrls[0]}" alt="Post media" onclick="openImage('${mediaUrls[0]}')" 
+                 style="width:100%; cursor:pointer; border-radius:8px;" loading="lazy">
+        </div>`;
+    } else if (mediaUrls.length > 1) {
+        mediaHtml = `<div class="post-media grid">
+            ${mediaUrls.map(url => `
+                <div class="grid-item">
+                    <img src="${url}" alt="Post media" onclick="openImage('${url}')" 
+                         style="width:100%; cursor:pointer; border-radius:8px;" loading="lazy">
+                </div>
+            `).join('')}
+        </div>`;
+    }
 
     const menuHtml = isOwnPost ? `
         <button class="post-menu-btn">⋮</button>
         <div class="post-menu">
-            <button onclick="editPost(${post.id}, '${escapeJs(post.content || "")}', '${post.media || ""}')">Edit Post</button>
+            <button onclick="editPost(${post.id}, '${escapeJs(post.content || "")}', '${mediaUrls.join(',') || ""}')">Edit Post</button>
         </div>` : "";
 
-    const commentsHtml = post.comments ? post.comments.map(renderComment).join("") : "";
-    const viewMoreComments = post.comments && post.comments.length >= 2 ? `<div class="view-more-comments" onclick="loadFullComments(${post.id})">View more comments</div>` : "";
+    const commentsHtml = post.comments?.map(renderComment).join("") || "";
+    const viewMoreComments = post.comments && post.comments.length >= 2
+        ? `<div class="view-more-comments" onclick="loadFullComments(${post.id})">View more comments</div>`
+        : "";
 
     return `
         <article class="post" id="post-${post.id}">
@@ -399,7 +446,7 @@ async function createComment(postId) {
         });
         if (res.ok) {
             document.getElementById(`comment-text-${postId}`).value = "";
-            loadPosts(); // Refresh to show new comment
+            loadPosts();
         } else {
             Swal.fire("Error", "Failed to comment", "error");
         }
@@ -495,7 +542,6 @@ async function toggleLike(id, type) {
 }
 
 window.editPost = function (postId, content, media) {
-    console.log(postId, content, media, "edit post")
     editingPostId = postId;
     document.getElementById("editText").value = content;
     document.getElementById("editMediaUrl").value = media;
@@ -528,6 +574,12 @@ async function saveEdit() {
         if (res.ok) {
             closeEditModal();
             loadPosts();
+
+            if (sendSound) {
+                sendSound.currentTime = 0;
+                sendSound.play().catch(() => { });
+            }
+
             Swal.fire("Updated!", "Post updated", "success");
         } else {
             Swal.fire("Error", "Update failed", "error");
@@ -536,6 +588,7 @@ async function saveEdit() {
         Swal.fire("Error", "Network error", "error");
     }
 }
+
 
 window.openImage = function (src) {
     document.getElementById("modalImage").src = src;

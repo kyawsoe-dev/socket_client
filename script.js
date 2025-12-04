@@ -687,6 +687,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       drawerEmail.textContent = user.email || "";
     }
     connectSocket();
+    createSkeletonItems();
     await loadConversations();
     await loadSuggestedUsers();
     await getIceServers();
@@ -1182,13 +1183,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     conversations.unshift(conv);
     renderConversations();
   }
+
+  function createSkeletonItems(count = 15) {
+    const container = document.getElementById("conversationSkeleton");
+    container.innerHTML = "";
+
+    for (let i = 0; i < count; i++) {
+      container.innerHTML += `
+          <div class="skeleton-item">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-lines">
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line long"></div>
+            </div>
+          </div>
+        `;
+    }
+  }
+
   let currentConvPage = 1;
   let totalConvPages = 1;
   let loadingConversations = false;
   async function loadConversations(page = 1) {
     if (loadingConversations) return [];
     loadingConversations = true;
-    const spinner = document.getElementById("loadingSpinner");
+    const spinner = document.getElementById("conversationSkeleton");
     spinner.style.display = "block";
     try {
       const res = await fetch(

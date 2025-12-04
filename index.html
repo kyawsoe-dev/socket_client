@@ -83,19 +83,22 @@
           </div>
 
           <div class="icon-group">
-            <a href="social.html" class="icon-btn icon-link">
-              <i class="fab fa-twitter"></i>
-            </a>
 
-            <button id="toggleSuggestedBtn" class="icon-btn" title="Toggle suggested users">
+            <button id="toggleSuggestedBtn" class="icon-btn" title="Suggested users">
               <i class="fas fa-user-plus"></i>
             </button>
 
-            <div class="notification-bell" id="notificationBell">
+            <div class="notification-bell" id="notificationBell" title="Notifications">
               <i class="fas fa-bell"></i>
               <span class="badge" id="notificationBadge">0</span>
             </div>
+
+            <a href="social.html" class="icon-btn icon-link" title="Social Media">
+              <i class="fa-brands fa-facebook-f"></i>
+            </a>
+
           </div>
+
 
           <div class="notification-dropdown" id="notificationDropdown">
             <div class="dropdown-header">
@@ -157,11 +160,11 @@
             New Group
           </button>
         </div>
-        <input id="searchUsersInput" type="text" placeholder="Search users with name" class="search-input" />
+        <input id="searchUsersInput" type="text" placeholder="Search users, group ..." class="search-input" />
         <ul id="searchedUsersList" class="users-list"></ul>
         <ul id="conversationsList" class="conversations-list"></ul>
 
-        <div id="loadingSpinner" class="loading">Loading...</div>
+        <div id="conversationSkeleton" class="skeleton-wrapper"></div>
       </div>
 
       <div class="chat-panel">

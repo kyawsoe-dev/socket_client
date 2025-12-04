@@ -12,12 +12,55 @@ body {
   overflow: hidden;
 }
 
-.loading {
+.skeleton-wrapper {
   display: none;
-  text-align: center;
-  padding: 20px;
-  color: #8e8e93;
-  font-size: 16px;
+  padding: 10px;
+}
+
+.skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.skeleton-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-lines {
+  flex: 1;
+}
+
+.skeleton-line {
+  height: 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-line.long {
+  width: 90%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .auth-view {
@@ -364,7 +407,7 @@ body {
 
 .me-display {
   font-weight: 600;
-  color: #000;
+  color: #333;
   font-size: 16px;
 }
 
@@ -559,8 +602,8 @@ body {
 
 .search-input {
   width: 100%;
-  max-width: 400px;
-  padding: 14px 20px;
+  max-width: min(95%, 450px);
+  padding: 13px 20px;
   border: none;
   border-radius: 20px;
   background: rgba(248, 249, 250, 0.8);
@@ -2265,6 +2308,7 @@ body {
   }
 
   .search-input {
+    padding: 8px 20px;
     margin: 8px;
     font-size: 14px;
   }

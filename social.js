@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3000/api/v1";
+const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
 const token = localStorage.getItem("token");
 const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 

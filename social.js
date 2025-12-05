@@ -1,4 +1,4 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+const API_BASE = "http://localhost:3000/api/v1";
 const token = localStorage.getItem("token");
 const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -6,10 +6,15 @@ if (!token || !currentUser.id) {
     window.location.href = "/index.html";
 }
 const sendSound = new Audio("/assets/audio/send.mp3");
+const likeSound = new Audio("/assets/audio/like.mp3");
+const commentSound = new Audio("/assets/audio/comment.mp3");
+
 let editingPostId = null;
 let storyGroups = [];
 let currentGroupIndex = -1;
 let currentStoryIndex = -1;
+let editingCommentId = null;
+
 
 document.addEventListener("DOMContentLoaded", () => {
     const avatarEl = document.getElementById("userAvatar");
@@ -105,71 +110,105 @@ document.querySelectorAll("#postText, #editText, #editCommentText").forEach(text
     }
 });
 
-
 // Media Preview for URL
-document.getElementById("mediaUrl").oninput = (e) => {
-    const url = e.target.value.trim();
-    const preview = document.getElementById("mediaPreview");
-    preview.innerHTML = "";
-    if (url) {
-        if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
-            preview.innerHTML = `<img src="${url}" alt="Preview" style="width:100%; border-radius:12px;">`;
-        } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-            preview.innerHTML = `<video controls style="width:100%; border-radius:12px;"><source src="${url}"></video>`;
+function setupMediaPreview(inputId, previewId) {
+    var input = document.getElementById(inputId);
+    var preview = document.getElementById(previewId);
+
+    input.oninput = function (e) {
+        var url = e.target.value.trim();
+        preview.innerHTML = "";
+        if (!url) return;
+
+        var youtubeMatch = url.match(
+            /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/
+        );
+        if (youtubeMatch) {
+            var videoId = youtubeMatch[1];
+            preview.innerHTML =
+                '<iframe width="100%" height="250" ' +
+                'src="https://www.youtube.com/embed/' + videoId + '" ' +
+                'title="YouTube video player" frameborder="0" ' +
+                'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
+                'allowfullscreen></iframe>';
+            return;
         }
-    }
-};
 
-document.getElementById("editMediaUrl").oninput = (e) => {
-    const url = e.target.value.trim();
-    const preview = document.getElementById("editMediaPreview");
-    preview.innerHTML = "";
-    if (url) {
         if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
-            preview.innerHTML = `<img src="${url}" alt="Preview" style="width:100%; border-radius:12px;">`;
-        } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-            preview.innerHTML = `<video controls style="width:100%; border-radius:12px;"><source src="${url}"></video>`;
+            preview.innerHTML = '<img src="' + url + '" alt="Preview" style="width:100%; border-radius:12px;">';
+            return;
         }
-    }
-};
 
-document.getElementById("storyMediaUrl").oninput = (e) => {
-    const url = e.target.value.trim();
-    const preview = document.getElementById("storyMediaPreview");
-    preview.innerHTML = "";
-    if (url) {
-        if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
-            preview.innerHTML = `<img src="${url}" alt="Preview" style="width:100%; border-radius:12px;">`;
-        } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-            preview.innerHTML = `<video controls style="width:100%; border-radius:12px;"><source src="${url}"></video>`;
+        if (url.match(/\.(mp4|webm|ogg)$/i)) {
+            preview.innerHTML = '<video controls style="width:100%; border-radius:12px;"><source src="' + url + '"></video>';
+            return;
         }
+
+        preview.innerHTML = '<img src="' + url + '" alt="Preview" style="width:100%; border-radius:12px;">';
+    };
+}
+
+setupMediaPreview("mediaUrl", "mediaPreview");
+setupMediaPreview("editMediaUrl", "editMediaPreview");
+setupMediaPreview("storyMediaUrl", "storyMediaPreview");
+
+
+// post and comment menu button toggles
+document.addEventListener("click", function (e) {
+    const btn = e.target;
+
+    if (btn.classList.contains("post-menu-btn") || btn.classList.contains("comment-menu-btn")) {
+        const menu = btn.nextElementSibling;
+
+        document.querySelectorAll(".post-menu, .comment-menu").forEach(m => {
+            if (m !== menu) m.classList.remove("show");
+        });
+
+        menu.classList.toggle("show");
+        return;
     }
-};
+
+    if (btn.closest(".post-menu") || btn.closest(".comment-menu")) {
+        return;
+    }
+
+    document.querySelectorAll(".post-menu, .comment-menu").forEach(m => m.classList.remove("show"));
+});
 
 
+// comment button click handler
+document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".add-comment button");
+    if (!btn) return;
+
+    const textarea = btn.parentElement.querySelector("textarea");
+    const postId = textarea.id.split("-")[2];
+
+    createComment(postId);
+});
+
+// CREATE POST
 async function createPost() {
     const content = document.getElementById("postText").value.trim();
     const media = document.getElementById("mediaUrl").value.trim();
 
-    if (!content && !media) {
-        return Swal.fire("Empty", "Write something or add media", "info");
-    }
+    if (!content && !media) return Swal.fire("Empty", "Write something or add media", "info");
 
     try {
         const res = await fetch(`${API_BASE}/social/posts`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ content, media, visibility: "PUBLIC" }),
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content, media, visibility: "PUBLIC" })
         });
 
         if (res.ok) {
+            const newPost = await res.json();
             document.getElementById("postText").value = "";
             document.getElementById("mediaUrl").value = "";
             document.getElementById("mediaPreview").innerHTML = "";
-            loadPosts();
+
+            const feed = document.getElementById("postsFeed");
+            feed.insertAdjacentHTML("afterbegin", renderPost(newPost));
 
             sendSound.currentTime = 0;
             sendSound.play().catch(() => { });
@@ -177,12 +216,14 @@ async function createPost() {
             Swal.fire("Success", "Posted!", "success");
         } else {
             const err = await res.json();
-            Swal.fire("Error", err.error || "Failed to post", "error");
+            Swal.fire("Error", err.error || "Failed", "error");
         }
     } catch (err) {
+        console.log(err, "error");
         Swal.fire("Error", "Network error", "error");
     }
 }
+
 
 // Drawer
 const userAvatar = document.getElementById("userAvatar");
@@ -221,8 +262,6 @@ signOutBtn.addEventListener("click", () => {
     window.location.href = "/index.html";
 });
 
-
-
 // Load posts
 let isLoading = false;
 let hasMore = true;
@@ -239,31 +278,25 @@ async function loadPosts(search = "", reset = false) {
         document.getElementById("postsFeed").innerHTML = "";
     }
 
-    // Show skeleton
     if (currentPage === 1) {
         document.getElementById("postsFeed").innerHTML = Array(2).fill(0).map(() => `
-        <div class="post post-skeleton">
-            
-            <div class="post-header">
-                <div class="skeleton circle avatar"></div>
-                <div class="skeleton-lines">
-                    <div class="skeleton line"></div>
-                    <div class="skeleton line short"></div>
+            <div class="post post-skeleton">
+                <div class="post-header">
+                    <div class="skeleton circle avatar"></div>
+                    <div class="skeleton-lines">
+                        <div class="skeleton line"></div>
+                        <div class="skeleton line short"></div>
+                    </div>
+                </div>
+                <div class="skeleton media"></div>
+                <div class="post-actions-skeleton">
+                    <div class="skeleton icon"></div>
+                    <div class="skeleton icon"></div>
+                    <div class="skeleton icon"></div>
                 </div>
             </div>
-
-            <div class="skeleton media"></div>
-
-            <div class="post-actions-skeleton">
-                <div class="skeleton icon"></div>
-                <div class="skeleton icon"></div>
-                <div class="skeleton icon"></div>
-            </div>
-
-        </div>
-    `).join("");
+        `).join("");
     }
-
 
     try {
         const query = new URLSearchParams({ page: currentPage, limit });
@@ -274,7 +307,7 @@ async function loadPosts(search = "", reset = false) {
         });
 
         if (res.status === 401) {
-            localStorage.removeItem("token");
+            localStorage.clear();
             window.location.href = "index.html";
             return;
         }
@@ -282,18 +315,14 @@ async function loadPosts(search = "", reset = false) {
         const { data } = await res.json();
 
         if (data.length < limit) hasMore = false;
-        if (data.length === 0 && currentPage === 1) {
-            document.getElementById("postsFeed").innerHTML = "<p style='text-align:center; color:#666; padding:40px'>No posts yet.</p>";
-            return;
-        }
 
         const feed = document.getElementById("postsFeed");
-        const newPosts = data.map(renderPost).join("");
+        const html = data.map(renderPost).join("");
 
         if (currentPage === 1) {
-            feed.innerHTML = newPosts;
+            feed.innerHTML = html || "<p style='text-align:center;padding:40px;color:#666'>No posts yet.</p>";
         } else {
-            feed.insertAdjacentHTML("beforeend", newPosts);
+            feed.insertAdjacentHTML("beforeend", html);
         }
 
         currentPage++;
@@ -305,48 +334,49 @@ async function loadPosts(search = "", reset = false) {
     }
 }
 
+// Render Post
 function renderPost(post) {
-    const author = post.author;
+    const author = post.author || {
+        id: currentUser.id,
+        displayName: currentUser.displayName,
+        username: currentUser.username
+    };
     const name = author.displayName || author.username;
     const isOwnPost = author.id === currentUser.id;
     const hasLiked = post.likes?.some(l => l.userId === currentUser.id);
 
-    // Normalize media into array
     let mediaUrls = [];
-    if (Array.isArray(post.media)) {
-        mediaUrls = post.media;
-    } else if (typeof post.media === "string" && post.media.trim() !== "") {
-        mediaUrls = [post.media];
-    }
+    if (Array.isArray(post.media)) mediaUrls = post.media;
+    else if (typeof post.media === "string" && post.media) mediaUrls = [post.media];
 
-    // Media layout
     let mediaHtml = "";
     if (mediaUrls.length === 1) {
-        mediaHtml = `<div class="post-media single">
-            <img src="${mediaUrls[0]}" alt="Post media" onclick="openImage('${mediaUrls[0]}')" 
-                 style="width:100%; cursor:pointer; border-radius:8px;" loading="lazy">
-        </div>`;
+        const url = mediaUrls[0].trim();
+        const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+        if (youtubeMatch) {
+            mediaHtml = `<div class="post-media single"><iframe width="100%" height="250" src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+        } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+            mediaHtml = `<div class="post-media single"><video controls style="width:100%; border-radius:12px;"><source src="${url}"></video></div>`;
+        } else {
+            mediaHtml = `<div class="post-media single"><img src="${url}" onclick="openImage('${url}')" style="width:100%; cursor:pointer;" loading="lazy"></div>`;
+        }
     } else if (mediaUrls.length > 1) {
-        mediaHtml = `<div class="post-media grid">
-            ${mediaUrls.map(url => `
-                <div class="grid-item">
-                    <img src="${url}" alt="Post media" onclick="openImage('${url}')" 
-                         style="width:100%; cursor:pointer; border-radius:8px;" loading="lazy">
-                </div>
-            `).join('')}
-        </div>`;
+        mediaHtml = `<div class="post-media grid">${mediaUrls.map(url => {
+            const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+            if (yt) return `<div class="grid-item"><iframe width="100%" height="150" src="https://www.youtube.com/embed/${yt[1]}" frameborder="0" allowfullscreen></iframe></div>`;
+            if (url.match(/\.(mp4|webm|ogg)$/i)) return `<div class="grid-item"><video controls><source src="${url}"></video></div>`;
+            return `<div class="grid-item"><img src="${url}" onclick="openImage('${url}')" loading="lazy"></div>`;
+        }).join("")}</div>`;
     }
 
     const menuHtml = isOwnPost ? `
-        <button class="post-menu-btn">⋮</button>
+        <button class="post-menu-btn">...</button>
         <div class="post-menu">
             <button onclick="editPost(${post.id}, '${escapeJs(post.content || "")}', '${mediaUrls.join(',') || ""}')">Edit Post</button>
         </div>` : "";
 
-    const commentsHtml = post.comments?.map(renderComment).join("") || "";
-    const viewMoreComments = post.comments && post.comments.length >= 2
-        ? `<div class="view-more-comments" onclick="loadFullComments(${post.id})">View more comments</div>`
-        : "";
+    const commentsHtml = (post.comments || []).map(renderComment).join("");
+    const viewMore = post.comments?.length >= 2 ? `<div class="view-more-comments" onclick="loadFullComments(${post.id})">View more comments</div>` : "";
 
     return `
         <article class="post" id="post-${post.id}">
@@ -367,31 +397,32 @@ function renderPost(post) {
                 <button class="action-btn ${hasLiked ? 'liked' : ''}" onclick="toggleLike(${post.id}, 'post')">
                     <i class="fa${hasLiked ? 's' : 'r'} fa-heart"></i> Like
                 </button>
-                <button class="action-btn" onclick="focusComment(${post.id})"><i class="far fa-comment"></i> Comment</button>
-                <button class="action-btn"><i class="far fa-share-square"></i> Share</button>
+                <button class="action-btn" onclick="focusComment(${post.id})">Comment</button>
+                <button class="action-btn">Share</button>
             </div>
             <div class="comments-section" id="comments-${post.id}">
                 ${commentsHtml}
-                ${viewMoreComments}
+                ${viewMore}
                 <div class="add-comment">
                     <textarea id="comment-text-${post.id}" placeholder="Write a comment..." onkeypress="handleCommentKeypress(event, ${post.id})"></textarea>
                     <button onclick="createComment(${post.id})"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
-        </article>
-    `;
+        </article>`;
 }
 
+// Render Comment
 function renderComment(comment) {
     const author = comment.author;
     const name = author.displayName || author.username;
     const isOwnComment = author.id === currentUser.id;
     const hasLiked = comment.likes?.some(l => l.userId === currentUser.id);
+
     const menuHtml = isOwnComment ? `
-        <button class="comment-menu-btn">⋮</button>
-        <div class="comment-menu">
-            <button onclick="editComment(${comment.id}, '${escapeJs(comment.content)}')">Edit</button>
-        </div>
+    <button class="comment-menu-btn">⋮</button>
+    <div class="comment-menu">
+        <button onclick="editComment(${comment.id}, '${escapeJs(comment.content)}')">Edit</button>
+    </div>
     ` : "";
 
     return `
@@ -400,10 +431,16 @@ function renderComment(comment) {
             <div class="comment-body">
                 <div class="comment-author">${name}</div>
                 <div class="comment-text">${escapeHtml(comment.content)}</div>
+
                 <div class="comment-actions">
-                    <button class="${hasLiked ? 'liked' : ''}" onclick="toggleLike(${comment.id}, 'comment')">
-                        Like (${comment.likes?.length || 0})
+                    <button 
+                        class="comment-like-btn ${hasLiked ? 'liked' : ''}"
+                        onclick="toggleLike(${comment.id}, 'comment')"
+                    >
+                        <i class="${hasLiked ? 'fas fa-heart' : 'far fa-heart'}"></i>
+                        <span class="comment-like-count">(${comment.likes?.length || 0})</span>
                     </button>
+
                     <span>${formatTime(comment.createdAt)}</span>
                 </div>
             </div>
@@ -412,6 +449,8 @@ function renderComment(comment) {
     `;
 }
 
+
+// Load full comments
 async function loadFullComments(postId) {
     try {
         const res = await fetch(`${API_BASE}/social/posts/${postId}/comments?limit=100`, {
@@ -431,29 +470,6 @@ function focusComment(postId) {
     document.getElementById(`comment-text-${postId}`).focus();
 }
 
-async function createComment(postId) {
-    const content = document.getElementById(`comment-text-${postId}`).value.trim();
-    if (!content) return;
-
-    try {
-        const res = await fetch(`${API_BASE}/social/posts/${postId}/comments`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ content }),
-        });
-        if (res.ok) {
-            document.getElementById(`comment-text-${postId}`).value = "";
-            loadPosts();
-        } else {
-            Swal.fire("Error", "Failed to comment", "error");
-        }
-    } catch (err) {
-        Swal.fire("Error", "Network error", "error");
-    }
-}
 
 function handleCommentKeypress(event, postId) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -485,115 +501,169 @@ async function editComment(commentId, content) {
     }
 }
 
-let editingCommentId = null;
 
-window.editComment = function (commentId, currentContent) {
-    editingCommentId = commentId;
-    document.getElementById("editCommentText").value = currentContent;
-    autoResizeTextarea(document.getElementById("editCommentText"));
-    document.getElementById("editCommentModal").classList.add("active");
-};
 
-function closeEditCommentModal() {
-    document.getElementById("editCommentModal").classList.remove("active");
-    editingCommentId = null;
-}
-
-async function saveCommentEdit() {
-    const content = document.getElementById("editCommentText").value.trim();
-    if (!content) return Swal.fire("Empty", "Comment cannot be empty", "warning");
-
-    try {
-        const res = await fetch(`${API_BASE}/social/comments/${editingCommentId}`, {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ content }),
-        });
-
-        if (res.ok) {
-            closeEditCommentModal();
-            loadPosts();
-            Swal.fire("Updated!", "Comment updated", "success");
-        }
-    } catch (err) {
-        Swal.fire("Error", "Failed to update comment", "error");
-    }
-}
-
+// TOGGLE LIKE
 async function toggleLike(id, type) {
-    const endpoint = type === 'post' ? `/social/posts/${id}/like` : `/social/comments/${id}/like`;
-    const isLiked = document.querySelector(`#${type}-${id} .liked`) !== null;
-    const method = isLiked ? "DELETE" : "POST";
+    const isPost = type === 'post';
+    const container = document.querySelector(`#${type}-${id}`);
+    if (!container) return;
+
+    const btn = isPost
+        ? container.querySelector(".action-btn:first-child")
+        : container.querySelector(".comment-actions button");
+
+    if (!btn) return;
+    const icon = btn.querySelector("i");
+
+    const wasLiked = btn.classList.contains("liked");
+
+    if (wasLiked) {
+        btn.classList.remove("liked");
+        if (icon) icon.className = "far fa-heart";
+    } else {
+        btn.classList.add("liked");
+        if (icon) icon.className = "fas fa-heart";
+    }
+
+    const countEl = isPost
+        ? container.querySelector(".post-stats span:first-child")
+        : btn;
+
+    let count = parseInt(countEl.textContent.match(/\d+/)?.[0] || "0");
+    count += wasLiked ? -1 : 1;
+
+    countEl.textContent = isPost ? `${count} likes` : `Like (${count})`;
+
+    likeSound.currentTime = 0;
+    likeSound.play().catch(() => { });
+
+    const method = wasLiked ? "DELETE" : "POST";
+    const endpoint = isPost
+        ? `/social/posts/${id}/like`
+        : `/social/comments/${id}/like`;
 
     try {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             method,
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-            loadPosts();
-        }
+
+        if (!res.ok) throw new Error();
     } catch (err) {
-        console.error("Toggle like failed:", err);
+        if (wasLiked) {
+            btn.classList.add("liked");
+            if (icon) icon.className = "fas fa-heart";
+            countEl.textContent = isPost ? `${count + 1} likes` : `Like (${count + 1})`;
+        } else {
+            btn.classList.remove("liked");
+            if (icon) icon.className = "far fa-heart";
+            countEl.textContent = isPost ? `${count - 1} likes` : `Like (${count - 1})`;
+        }
+
+        Swal.fire("Error", "Action failed", "error");
     }
 }
 
-window.editPost = function (postId, content, media) {
-    editingPostId = postId;
-    document.getElementById("editText").value = content;
-    document.getElementById("editMediaUrl").value = media;
-    const preview = document.getElementById("editMediaPreview");
-    preview.innerHTML = media ? `<img src="${media}" style="width:100%; border-radius:12px;">` : "";
-    document.getElementById("editModal").classList.add("active");
-};
 
-window.closeEditModal = function () {
-    document.getElementById("editModal").classList.remove("active");
-    editingPostId = null;
-};
+// CREATE COMMENT
+async function createComment(postId) {
+    const textarea = document.getElementById(`comment-text-${postId}`);
+    const content = textarea.value.trim();
+    if (!content) return;
 
+    try {
+        const res = await fetch(`${API_BASE}/social/posts/${postId}/comments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content })
+        });
+
+        if (res.ok) {
+            const newComment = await res.json();
+
+            commentSound.currentTime = 0;
+            commentSound.play().catch(() => { });
+
+            const section = document.getElementById(`comments-${postId}`);
+            section.insertAdjacentHTML("afterbegin", renderComment(newComment));
+
+            const countEl = document.getElementById(`comment-count-${postId}`);
+            countEl.textContent = `${(parseInt(countEl.textContent) || 0) + 1} comments`;
+
+            textarea.value = "";
+            autoResizeTextarea(textarea);
+        } else {
+            Swal.fire("Error", "Failed to comment", "error");
+        }
+    } catch (err) {
+        console.log(err, "error");
+        Swal.fire("Error", "Network error", "error");
+    }
+}
+
+
+// EDIT POST
 async function saveEdit() {
     const content = document.getElementById("editText").value.trim();
     const media = document.getElementById("editMediaUrl").value.trim();
 
-    if (!content && !media) return Swal.fire("Error", "Content or media required", "error");
+    if (!content && !media)
+        return Swal.fire("Error", "Required", "error");
 
     try {
         const res = await fetch(`${API_BASE}/social/posts/${editingPostId}`, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${token}`
             },
-            body: JSON.stringify({ content, media, visibility: "PUBLIC" }),
+            body: JSON.stringify({ content, media, visibility: "PUBLIC" })
         });
 
         if (res.ok) {
+            const updated = await res.json();
+
             closeEditModal();
-            loadPosts();
 
-            if (sendSound) {
-                sendSound.currentTime = 0;
-                sendSound.play().catch(() => { });
-            }
+            const el = document.getElementById(`post-${updated.id}`);
+            if (el) el.outerHTML = renderPost(updated);
 
-            Swal.fire("Updated!", "Post updated", "success");
-        } else {
-            Swal.fire("Error", "Update failed", "error");
+            sendSound.currentTime = 0;
+            sendSound.play().catch(() => { });
+
+            Swal.fire("Updated!", "", "success");
         }
     } catch (err) {
-        Swal.fire("Error", "Network error", "error");
+        console.log(err, "save edit error");
+        Swal.fire("Error", "Failed", "error");
     }
 }
 
 
-window.openImage = function (src) {
-    document.getElementById("modalImage").src = src;
-    document.getElementById("imageModal").classList.add("active");
-};
+// EDIT COMMENT
+async function saveCommentEdit() {
+    const content = document.getElementById("editCommentText").value.trim();
+    if (!content) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/social/comments/${editingCommentId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content })
+        });
+
+        if (res.ok) {
+            const { data: updated } = await res.json();
+            closeEditCommentModal();
+            const el = document.getElementById(`comment-${updated.id}`);
+            if (el) el.outerHTML = renderComment(updated);
+            Swal.fire("Updated!", "", "success");
+        }
+    } catch (err) {
+        Swal.fire("Error", "Failed", "error");
+    }
+}
 
 // Stories
 async function loadStories() {
@@ -671,6 +741,9 @@ async function createStory() {
         if (res.ok) {
             closeAddStory();
             loadStories();
+
+            sendSound.play();
+
             Swal.fire("Success", "Story added!", "success");
         } else {
             Swal.fire("Error", "Failed to add story", "error");
@@ -680,13 +753,7 @@ async function createStory() {
     }
 }
 
-window.openStoryViewer = async function (groupIndex, storyIndex) {
-    currentGroupIndex = groupIndex;
-    currentStoryIndex = storyIndex;
-    renderCurrentStory();
-    document.getElementById("storyViewer").classList.add("active");
-    await viewCurrentStory();
-};
+
 
 async function viewCurrentStory() {
     const story = storyGroups[currentGroupIndex].stories[currentStoryIndex];
@@ -749,6 +816,30 @@ function startProgress() {
     }, STORY_DURATION);
 }
 
+function formatTime(date) {
+    const d = new Date(date);
+    const diff = Date.now() - d.getTime();
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
+    if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+    return d.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function escapeJs(str) {
+    return str
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
+}
+
 // Pause on hold
 let holdTimer;
 document.getElementById("storyViewer").addEventListener("mousedown", () => {
@@ -759,6 +850,15 @@ document.getElementById("storyViewer").addEventListener("mouseup", () => {
     clearTimeout(holdTimer);
     startProgress();
 });
+
+
+window.openStoryViewer = async function (groupIndex, storyIndex) {
+    currentGroupIndex = groupIndex;
+    currentStoryIndex = storyIndex;
+    renderCurrentStory();
+    document.getElementById("storyViewer").classList.add("active");
+    await viewCurrentStory();
+};
 
 
 window.prevStory = function () {
@@ -815,39 +915,76 @@ window.deleteStory = async function (storyId) {
     }
 };
 
-function formatTime(date) {
-    const d = new Date(date);
-    const diff = Date.now() - d.getTime();
-    if (diff < 60000) return "Just now";
-    if (diff < 3600000) return Math.floor(diff / 60000) + "m ago";
-    if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
-    return d.toLocaleDateString();
-}
+// COMMENT EDIT
+window.editComment = function (commentId, currentContent) {
+    editingCommentId = commentId;
 
-function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-}
+    const decodeHtml = html => {
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
 
-function escapeJs(str) {
-    return str.replace(/`/g, "\\`").replace(/\${/g, "\\${");
-}
+    const textarea = document.getElementById("editCommentText");
+    textarea.value = decodeHtml(currentContent);
 
+    document.getElementById("editCommentModal").classList.add("active");
+    textarea.focus();
+
+    autoResizeTextarea(textarea);
+};
+
+
+window.closeEditCommentModal = function () {
+    document.getElementById("editCommentModal").classList.remove("active");
+    editingCommentId = null;
+};
+
+window.saveCommentEdit = saveCommentEdit;
+
+
+// POST EDIT
+window.editPost = function (postId, content, media) {
+    editingPostId = postId;
+    document.getElementById("editText").value = content;
+    document.getElementById("editMediaUrl").value = media;
+    document.getElementById("editMediaPreview").innerHTML = media ? `<img src="${media}" style="width:100%; border-radius:12px;">` : "";
+    document.getElementById("editModal").classList.add("active");
+};
+
+window.closeEditModal = function () {
+    document.getElementById("editModal").classList.remove("active");
+    editingPostId = null;
+};
+
+window.saveEdit = saveEdit;
+
+
+// COMMENT CREATION / LIKE
 window.toggleLike = toggleLike;
 window.focusComment = focusComment;
 window.handleCommentKeypress = handleCommentKeypress;
 window.createComment = createComment;
-window.editPost = editPost;
+
+
+// LOAD COMMENTS
 window.loadFullComments = loadFullComments;
-window.editComment = editComment;
+
+
+// STORIES
 window.closeStoryViewer = closeStoryViewer;
 window.prevStory = prevStory;
 window.nextStory = nextStory;
+
 window.closeAddStory = closeAddStory;
 window.createStory = createStory;
-window.closeEditModal = closeEditModal;
-window.saveEdit = saveEdit;
-window.openImage = openImage;
+
 window.openStoryViewer = openStoryViewer;
 window.deleteStory = deleteStory;
+
+
+// IMAGE PREVIEW
+window.openImage = function (src) {
+    document.getElementById("modalImage").src = src;
+    document.getElementById("imageModal").classList.add("active");
+};

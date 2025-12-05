@@ -1,4 +1,4 @@
-const API_BASE = "https://socket-server-ohp4.onrender.com/api/v1";
+const API_BASE = "http://localhost:3000/api/v1";
 const SOCKET_URL = "https://socket-server-ohp4.onrender.com";
 
 var socket = null;
@@ -16,6 +16,7 @@ let onlineUsers = new Set();
 let lastActiveMap = new Map();
 const sendSound = new Audio("/assets/audio/send.mp3");
 const receiveSound = new Audio("/assets/audio/receive.mp3");
+const notificationSound = new Audio("/assets/audio/notification.mp3");
 const typingSound = new Audio("/assets/audio/typing.mp3");
 const callSound = new Audio("/assets/audio/call.mp3");
 const endSound = new Audio("/assets/audio/end.mp3");
@@ -1147,8 +1148,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (receivedMessages.has(msg.id)) return;
     appendMessageToChat(msg);
     if (msg.senderId !== currentUser.id) {
-      receiveSound.currentTime = 0;
-      receiveSound.play().catch(() => { });
+      notificationSound.currentTime = 0;
+      notificationSound.play().catch(() => { });
       if (
         !currentConversation ||
         currentConversation.id !== msg.conversationId

@@ -50,7 +50,16 @@
       </div>
 
       <!-- Sign Out Button -->
-      <button id="signOutBtn" class="signout-btn">Sign Out</button>
+      <div class="drawer-footer">
+        <button id="signOutBtn" class="signout-btn">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+
+        <div class="drawer-meta">
+          <span class="app-version">Version 1.0.0</span>
+          <span class="rights-text">© 2025 KS Chat App. All rights reserved.</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -118,7 +127,7 @@
             border-radius: 8px;
             border: 1px solid #ddd;
           " />
-      <input type="text" id="storyMediaUrl" placeholder="Image/Video URL" style="
+      <input type="text" id="storyMediaUrl" placeholder="Paste Image URL" style="
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -159,7 +168,7 @@
   <div id="editCommentModal" class="modal edit-modal">
     <div class="modal-content">
       <h3>Edit Comment</h3>
-      <textarea id="editCommentText" placeholder="Edit your comment..."></textarea>
+      <textarea id="editCommentText" placeholder="Edit your comment...">Eidt Comment adas</textarea>
       <div class="edit-actions">
         <button onclick="closeEditCommentModal()" class="close-modal">
           Cancel

@@ -60,7 +60,7 @@ body {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background-color: #0088cc;
+  background-color: var(--primary);
   color: white;
   display: flex;
   align-items: center;
@@ -73,6 +73,12 @@ body {
 .user-details p {
   margin: 2px 0;
   font-size: 14px;
+}
+
+#drawerDisplayName {
+  font-weight: 700;
+  font-size: 18px;
+  color: #1f2937;
 }
 
 .sidebar-content {
@@ -90,6 +96,53 @@ body {
   font-weight: bold;
   margin-top: 40px;
   width: 100%;
+}
+
+.drawer-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  border-top: 1px solid #ddd;
+  padding: 12px;
+}
+
+.drawer-logout-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, transform 0.2s ease;
+  width: 100%;
+}
+.drawer-logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+}
+.drawer-logout-btn i {
+  margin-right: 6px;
+  font-size: 16px;
+}
+.drawer-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+  gap: 2px;
+}
+.drawer-meta .app-version {
+  font-weight: 500;
+}
+.drawer-meta .rights-text {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 /* Topbar */
@@ -229,7 +282,8 @@ body {
 }
 
 #postText,
-#editText {
+#editText,
+#editCommentText {
   width: 100%;
   min-height: 100px;
   max-height: 400px;
@@ -279,6 +333,13 @@ body {
 #postText::-webkit-scrollbar-thumb {
   background: #c4c4c4;
   border-radius: 3px;
+}
+
+#mediaUrl:focus {
+  border-color: #1877f2;
+  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.5);
+  outline: none;
+  transition: box-shadow 0.2s, border 0.2s;
 }
 
 .post-actions-bar,
@@ -469,7 +530,8 @@ body {
   overflow: hidden;
   display: none;
 }
-.post:hover .post-menu {
+
+.post-menu.show {
   display: block;
 }
 
@@ -499,6 +561,7 @@ body {
   justify-content: center;
   padding: 20px;
 }
+
 .modal.active {
   display: flex;
 }
@@ -510,6 +573,7 @@ body {
   max-width: 90%;
   text-align: center;
 }
+
 .edit-modal {
   width: 500px;
   max-width: 95%;
@@ -738,8 +802,6 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 14px;
-  padding: 8px 14px;
   border-radius: 30px;
   background: rgba(0, 0, 0, 0.45);
   color: white;
@@ -799,8 +861,8 @@ body {
 
 .story-close {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: 25px;
+  right: 5px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -822,23 +884,33 @@ body {
   transform: scale(1.08);
 }
 
-/* Comments Section */
+/* Comments */
 .comments-section {
   padding: 0 16px 12px;
 }
+
 .add-comment {
   display: flex;
   gap: 8px;
   margin-top: 12px;
   align-items: center;
 }
+
 .add-comment textarea {
   flex: 1;
   padding: 10px;
   border-radius: 20px;
   border: 1px solid var(--border);
   resize: none;
+  outline: none;
+  transition: box-shadow 0.2s, border 0.2s;
 }
+
+.add-comment textarea:focus {
+  border-color: #1877f2;
+  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.5);
+}
+
 .add-comment button {
   background: var(--primary);
   color: white;
@@ -848,6 +920,7 @@ body {
   height: 36px;
   cursor: pointer;
 }
+
 .comment {
   display: flex;
   gap: 10px;
@@ -944,7 +1017,7 @@ body {
   display: none;
 }
 
-.comment:hover .comment-menu {
+.comment-menu.show {
   display: block;
 }
 

@@ -213,7 +213,14 @@ async function createPost() {
             sendSound.currentTime = 0;
             sendSound.play().catch(() => { });
 
-            Swal.fire("Success", "Posted!", "success");
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                timer: 1500,
+                showConfirmButton: false,
+                timerProgressBar: false
+            });
+
         } else {
             const err = await res.json();
             Swal.fire("Error", err.error || "Failed", "error");
@@ -421,7 +428,7 @@ function renderComment(comment) {
     const menuHtml = isOwnComment ? `
     <button class="comment-menu-btn">⋮</button>
     <div class="comment-menu">
-        <button onclick="editComment(${comment.id}, '${escapeJs(comment.content)}')">Edit</button>
+        <button onclick="editComment(${comment.id}, '${escapeJs(comment.content)}')">Edit Comment</button>
     </div>
     ` : "";
 
@@ -497,6 +504,8 @@ async function editComment(commentId, content) {
             Swal.fire("Error", "Failed to update", "error");
         }
     } catch (err) {
+        console.log(err, "error");
+
         Swal.fire("Error", "Network error", "error");
     }
 }
@@ -632,7 +641,14 @@ async function saveEdit() {
             sendSound.currentTime = 0;
             sendSound.play().catch(() => { });
 
-            Swal.fire("Updated!", "", "success");
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                timer: 1500,
+                showConfirmButton: false,
+                timerProgressBar: false
+            });
+
         }
     } catch (err) {
         console.log(err, "save edit error");
@@ -654,13 +670,33 @@ async function saveCommentEdit() {
         });
 
         if (res.ok) {
-            const { data: updated } = await res.json();
+            const updated = await res.json();
+            if (!updated.author) {
+                updated.author = {
+                    displayName: currentUser.displayName,
+                    username: currentUser.username,
+                    id: currentUser.id
+                };
+            }
+
             closeEditCommentModal();
+
             const el = document.getElementById(`comment-${updated.id}`);
             if (el) el.outerHTML = renderComment(updated);
-            Swal.fire("Updated!", "", "success");
+
+            commentSound.currentTime = 0;
+            commentSound.play().catch(() => { });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                timer: 1500,
+                showConfirmButton: false,
+                timerProgressBar: false
+            });
         }
     } catch (err) {
+        console.log(err, "save comment edit error");
         Swal.fire("Error", "Failed", "error");
     }
 }
@@ -744,7 +780,14 @@ async function createStory() {
 
             sendSound.play();
 
-            Swal.fire("Success", "Story added!", "success");
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                timer: 1500,
+                showConfirmButton: false,
+                timerProgressBar: false
+            });
+
         } else {
             Swal.fire("Error", "Failed to add story", "error");
         }
